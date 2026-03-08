@@ -41,11 +41,11 @@ class OnlineBotSelectScene extends Phaser.Scene {
 
     // Scroll arrows
     this._leftArrow = this.add.text(18, 310, '◄', {
-      fontSize: '28px', color: '#334455', fontFamily: 'monospace'
-    }).setOrigin(0, 0.5).setInteractive({ useHandCursor: true }).setDepth(10);
+      fontSize: '32px', color: '#667788', fontFamily: 'monospace', fontStyle: 'bold'
+    }).setOrigin(0, 0.5).setInteractive({ useHandCursor: true }).setDepth(20);
     this._rightArrow = this.add.text(882, 310, '►', {
-      fontSize: '28px', color: '#334455', fontFamily: 'monospace'
-    }).setOrigin(1, 0.5).setInteractive({ useHandCursor: true }).setDepth(10);
+      fontSize: '32px', color: '#667788', fontFamily: 'monospace', fontStyle: 'bold'
+    }).setOrigin(1, 0.5).setInteractive({ useHandCursor: true }).setDepth(20);
 
     this._leftArrow.on('pointerover', () => { if (this._scrollIndex > 0) this._leftArrow.setColor('#aabbcc'); });
     this._leftArrow.on('pointerout', () => this._updateArrows());
@@ -169,8 +169,8 @@ class OnlineBotSelectScene extends Phaser.Scene {
   }
 
   _updateArrows() {
-    this._leftArrow.setColor(this._scrollIndex > 0 ? '#334455' : '#111122');
-    this._rightArrow.setColor(this._scrollIndex < this._maxScroll ? '#334455' : '#111122');
+    this._leftArrow.setColor(this._scrollIndex > 0 ? '#aabbcc' : '#445566');
+    this._rightArrow.setColor(this._scrollIndex < this._maxScroll ? '#aabbcc' : '#445566');
   }
 
   selectBot(key) {
