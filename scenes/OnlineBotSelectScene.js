@@ -13,6 +13,7 @@ class OnlineBotSelectScene extends Phaser.Scene {
 
   create() {
     this.drawBackground();
+    this._scrollIndex = 0;
 
     const roleLabel = this.isHost ? '[HOST]' : '[GUEST]';
     this.add.text(450, 40, `CHOOSE YOUR BOT  ${roleLabel}`, {
@@ -22,17 +23,46 @@ class OnlineBotSelectScene extends Phaser.Scene {
       fontSize: '13px', color: '#445566', fontFamily: 'monospace'
     }).setOrigin(0.5);
 
-    const total = BOT_ROSTER.length;
-    const spacing = 340;
-    const startX = 450 - ((total - 1) * spacing) / 2;
-    BOT_ROSTER.forEach((botDef, i) => this.createBotCard(startX + i * spacing, 310, botDef));
+    // Container holds all cards — scrolled horizontally
+    const allBots = [...BOT_ROSTER, ...CUSTOM_ROSTER];
+    const SPACING = 330;
+    const CARD_W = 300;
+    const VISIBLE = 2; // bots visible at once (3rd partially)
+    this._maxScroll = Math.max(0, allBots.length - VISIBLE);
+    this._spacing = SPACING;
 
-    this.statusText = this.add.text(450, 558, '', {
+    // Initial container X: first card's left edge at x=25
+    this._containerBaseX = 25 + CARD_W / 2; // = 175 → first card center at 175
+    this.cardContainer = this.add.container(0, 0);
+
+    allBots.forEach((botDef, i) => {
+      this._createBotCardInContainer(this._containerBaseX + i * SPACING, 310, botDef);
+    });
+
+    // Scroll arrows
+    this._leftArrow = this.add.text(18, 310, '◄', {
+      fontSize: '28px', color: '#334455', fontFamily: 'monospace'
+    }).setOrigin(0, 0.5).setInteractive({ useHandCursor: true }).setDepth(10);
+    this._rightArrow = this.add.text(882, 310, '►', {
+      fontSize: '28px', color: '#334455', fontFamily: 'monospace'
+    }).setOrigin(1, 0.5).setInteractive({ useHandCursor: true }).setDepth(10);
+
+    this._leftArrow.on('pointerover', () => { if (this._scrollIndex > 0) this._leftArrow.setColor('#aabbcc'); });
+    this._leftArrow.on('pointerout', () => this._updateArrows());
+    this._leftArrow.on('pointerdown', () => this._scroll(-1));
+
+    this._rightArrow.on('pointerover', () => { if (this._scrollIndex < this._maxScroll) this._rightArrow.setColor('#aabbcc'); });
+    this._rightArrow.on('pointerout', () => this._updateArrows());
+    this._rightArrow.on('pointerdown', () => this._scroll(1));
+
+    this._updateArrows();
+
+    this.statusText = this.add.text(450, 520, '', {
       fontSize: '13px', color: '#aabbcc', fontFamily: 'monospace', align: 'center'
     }).setOrigin(0.5);
 
-    this.fightBg = this.add.rectangle(450, 600, 240, 52, 0x333333);
-    this.fightTxt = this.add.text(450, 600, 'FIGHT!', {
+    this.fightBg = this.add.rectangle(450, 580, 240, 52, 0x333333);
+    this.fightTxt = this.add.text(450, 580, 'FIGHT!', {
       fontSize: '24px', color: '#666666', fontFamily: 'monospace', fontStyle: 'bold'
     }).setOrigin(0.5);
 
@@ -59,7 +89,7 @@ class OnlineBotSelectScene extends Phaser.Scene {
     this.makeBackButton(() => { NET.destroy(); this.scene.start('OnlineLobbyScene'); });
   }
 
-  createBotCard(x, y, botDef) {
+  _createBotCardInContainer(x, y, botDef) {
     const cw = 300, ch = 330;
     const colorHex = '#' + botDef.color.toString(16).padStart(6, '0');
 
@@ -72,22 +102,31 @@ class OnlineBotSelectScene extends Phaser.Scene {
 
     const previewKey = 'preview_' + botDef.key;
     if (!this.textures.exists(previewKey)) {
-      Bot.createTexture(this, { ...botDef, key: previewKey });
+      if (botDef.loadoutConfig) {
+        // Custom bot
+        CustomBot._makeTexture(this, previewKey, botDef.loadoutConfig.color, botDef.loadoutConfig.chassis);
+      } else {
+        // Standard bot
+        Bot.createTexture(this, { ...botDef, key: previewKey });
+      }
     }
-    this.add.image(x, y - 95, previewKey).setScale(2.5);
+    const preview = this.add.image(x, y - 95, previewKey).setScale(2.5);
 
-    this.add.text(x, y - 22, botDef.name, {
+    const nameText = this.add.text(x, y - 22, botDef.name, {
       fontSize: '22px', color: colorHex, fontFamily: 'monospace', fontStyle: 'bold'
     }).setOrigin(0.5);
-    this.add.text(x, y + 10, botDef.weapon, {
+    const weaponText = this.add.text(x, y + 10, botDef.weapon || 'Unknown', {
       fontSize: '12px', color: '#445566', fontFamily: 'monospace'
     }).setOrigin(0.5);
-    this.add.text(x, y + 38, botDef.description, {
+    const descText = this.add.text(x, y + 38, botDef.description || 'Custom build', {
       fontSize: '11px', color: '#667788', fontFamily: 'monospace',
       align: 'center', wordWrap: { width: 260 }
     }).setOrigin(0.5);
 
-    this.drawStatBars(x, y + 100, botDef.stats);
+    const stats = botDef.stats || { speed: 50, armor: 50, weapon: 50 };
+    const statItems = this._makeStatBars(x, y + 90, stats);
+
+    this.cardContainer.add([card, border, preview, nameText, weaponText, descText, ...statItems]);
 
     card.on('pointerover', () => { if (this.selectedKey !== botDef.key) card.setFillStyle(0x1a1a33); });
     card.on('pointerout', () => { if (this.selectedKey !== botDef.key) card.setFillStyle(0x111122); });
@@ -96,21 +135,42 @@ class OnlineBotSelectScene extends Phaser.Scene {
     this.cards.push({ card, border, botDef, cw, ch });
   }
 
-  drawStatBars(x, y, stats) {
+  _makeStatBars(x, y, stats) {
     const entries = [
       { label: 'SPD', val: stats.speed, color: 0x44aaff },
       { label: 'ARM', val: stats.armor, color: 0x44ff88 },
       { label: 'WPN', val: stats.weapon, color: 0xff8844 }
     ];
     const bw = 160;
+    const items = [];
     entries.forEach(({ label, val, color }, i) => {
-      const by = y + i * 22;
-      this.add.text(x - bw / 2 - 2, by, label, {
+      const by = y + i * 24;
+      items.push(this.add.text(x - bw / 2 - 4, by, label, {
         fontSize: '10px', color: '#445566', fontFamily: 'monospace'
-      }).setOrigin(1, 0.5);
-      this.add.rectangle(x + 5, by, bw, 8, 0x222233).setOrigin(0, 0.5);
-      this.add.rectangle(x + 5, by, Math.round(bw * val / 100), 8, color).setOrigin(0, 0.5);
+      }).setOrigin(1, 0.5));
+      items.push(this.add.rectangle(x + 5, by, bw, 8, 0x222233).setOrigin(0, 0.5));
+      items.push(this.add.rectangle(x + 5, by, Math.round(bw * val / 100), 8, color).setOrigin(0, 0.5));
     });
+    return items;
+  }
+
+  _scroll(dir) {
+    const next = this._scrollIndex + dir;
+    if (next < 0 || next > this._maxScroll) return;
+    this._scrollIndex = next;
+    const targetX = -(this._scrollIndex * this._spacing);
+    this.tweens.add({
+      targets: this.cardContainer,
+      x: targetX,
+      duration: 220,
+      ease: 'Power2'
+    });
+    this._updateArrows();
+  }
+
+  _updateArrows() {
+    this._leftArrow.setColor(this._scrollIndex > 0 ? '#334455' : '#111122');
+    this._rightArrow.setColor(this._scrollIndex < this._maxScroll ? '#334455' : '#111122');
   }
 
   selectBot(key) {
