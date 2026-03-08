@@ -169,10 +169,26 @@ class CustomBot extends Bot {
     if (this._statusLabel) this._statusLabel.setPosition(this.x, this.y + 38);
     // Sync passive weapon gfx
     switch (this._weaponType) {
-      case 'spinner': if (!this.spinnerActive) SpinnerBot.prototype._updateSpinnerGfx.call(this); break;
-      case 'hammer':  if (!this.hammerSwinging) HammerBot.prototype._updateHammerGfx.call(this); break;
-      case 'flipper': if (!this._armFiring) FlipperBot.prototype._updateFlipperGfx.call(this); break;
-      case 'crusher': if (!this.crushGrabActive) CrusherBot.prototype._updateClawGfx.call(this); break;
+      case 'spinner': if (!this.spinnerActive) this._updateSpinnerGfx(); break;
+      case 'hammer':  if (!this.hammerSwinging) this._updateHammerGfx(); break;
+      case 'flipper': if (!this._armFiring) this._updateFlipperGfx(); break;
+      case 'crusher': if (!this.crushGrabActive) this._updateClawGfx(); break;
+    }
+  }
+
+  // Delegating wrapper methods for weapon graphics updates
+  _updateSpinnerGfx() { SpinnerBot.prototype._updateSpinnerGfx.call(this); }
+  _updateHammerGfx() { HammerBot.prototype._updateHammerGfx.call(this); }
+  _updateFlipperGfx() { FlipperBot.prototype._updateFlipperGfx.call(this); }
+  _updateClawGfx() { CrusherBot.prototype._updateClawGfx.call(this); }
+
+  // Delegating wrapper methods for weapon actions
+  _fire(enemy) { FlipperBot.prototype._fire.call(this, enemy); }
+  _release(enemy) { CrusherBot.prototype._release.call(this, enemy); }
+  _updateStatusLabel() { 
+    if (this._weaponType === 'flipper') FlipperBot.prototype._updateStatusLabel.call(this);
+    else if (this._statusLabel && this._weaponType === 'hammer') {
+      // HammerBot doesn't have _updateStatusLabel, so we skip it
     }
   }
 
