@@ -125,6 +125,30 @@ class FlipperBot extends Bot {
         this._flippedEnemy = enemy;
         this._wallCheckTimer = 800;
 
+        // Launch animation — tumble spin + arc scale
+        const spinDir = Math.random() < 0.5 ? 1 : -1;
+        enemy.setAngularVelocity(spinDir * 600 * chargeRatio);
+        const arcDuration = 180 + chargeRatio * 220; // 180–400ms
+        this.scene.tweens.add({
+          targets: enemy,
+          scaleX: 1 + 0.35 * chargeRatio,
+          scaleY: 1 + 0.35 * chargeRatio,
+          duration: arcDuration * 0.45,
+          ease: 'Sine.easeOut',
+          yoyo: true,
+          onComplete: () => {
+            if (!enemy.active) return;
+            enemy.setAngularVelocity(0);
+            enemy.setScale(1);
+            // Landing damage
+            const landDamage = Math.round(cfg.flipDamage * chargeRatio * 0.6);
+            if (landDamage > 0) enemy.takeDamage(landDamage, 'side');
+            if (this.scene.showImpactText && chargeRatio >= 0.4) {
+              this.scene.showImpactText(enemy.x, enemy.y - 16, 'THUD!', '#cc7722');
+            }
+          }
+        });
+
         if (this.scene.showImpactText) {
           if (chargeRatio >= 0.85) {
             this.scene.showImpactText(enemy.x, enemy.y - 20, 'FWOOSH!', '#ff8800');

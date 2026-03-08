@@ -97,8 +97,8 @@ class CrusherBot extends Bot {
       } else {
         this._release(null);
       }
-    } else if (jDown && !this._jWasDown && this._grabCooldown <= 0) {
-      // Attempt grab
+    } else if (jDown && this._grabCooldown <= 0) {
+      // Attempt grab — triggers while J held so walking into range works too
       if (enemy?.active) {
         const dist = Phaser.Math.Distance.Between(this.x, this.y, enemy.x, enemy.y);
         if (dist < cfg.grabRange) {

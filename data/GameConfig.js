@@ -57,11 +57,11 @@ const GAME_CONFIG = {
 
   // ── Crusher ─────────────────────────────────────────────────────────────────
   crusher: {
-    grabRange:       55,   // max distance to initiate grab
+    grabRange:       78,   // max distance to initiate grab (generous range)
     crushDps:        8,    // HP per second while grabbed
     wallSlamDamage:  38,   // bonus HP when grabbed bot is driven into a wall
     maxGrabMs:       3000, // auto-release after this long
-    grabCooldownMs:  2000  // cooldown between grabs
+    grabCooldownMs:  1200  // cooldown between grabs
   }
 
 };
