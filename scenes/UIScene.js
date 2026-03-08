@@ -42,15 +42,15 @@ class UIScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     // --- Game over overlay ---
-    this.gameOverBg = this.add.rectangle(450, 325, 420, 180, 0x000000, 0.88).setVisible(false);
-    this.gameOverText = this.add.text(450, 295, '', {
+    this.gameOverBg = this.add.rectangle(450, 325, 420, 190, 0x000000, 0.88).setVisible(false);
+    this.gameOverText = this.add.text(450, 288, '', {
       fontSize: '36px', color: '#ffffff', fontFamily: 'monospace', fontStyle: 'bold'
     }).setOrigin(0.5).setVisible(false);
-    this.gameOverSub = this.add.text(450, 345, '', {
+    this.gameOverSub = this.add.text(450, 335, '', {
       fontSize: '15px', color: '#aaaaaa', fontFamily: 'monospace'
     }).setOrigin(0.5).setVisible(false);
-    this.gameOverReturn = this.add.text(450, 380, 'Returning to menu...', {
-      fontSize: '12px', color: '#555577', fontFamily: 'monospace'
+    this.gameOverReturn = this.add.text(450, 368, 'Returning to menu...', {
+      fontSize: '11px', color: '#555577', fontFamily: 'monospace'
     }).setOrigin(0.5).setVisible(false);
 
     // Events
@@ -98,7 +98,22 @@ class UIScene extends Phaser.Scene {
       this._showOnlineButtons(data.isHost);
     } else {
       this.gameOverReturn.setVisible(true);
+      this._showSoloButton(data);
     }
+  }
+
+  _showSoloButton(data) {
+    const btn = this.add.rectangle(450, 398, 180, 36, 0x331111).setInteractive({ useHandCursor: true });
+    const txt = this.add.text(450, 398, '◄ MAIN MENU', {
+      fontSize: '14px', color: '#cc4422', fontFamily: 'monospace', fontStyle: 'bold'
+    }).setOrigin(0.5);
+    btn.on('pointerover', () => { btn.setFillStyle(0x662211); txt.setColor('#ff6644'); });
+    btn.on('pointerout', () => { btn.setFillStyle(0x331111); txt.setColor('#cc4422'); });
+    btn.on('pointerdown', () => {
+      this.scene.stop('BattleScene');
+      this.scene.stop('UIScene');
+      this.scene.start('MainMenuScene', { result: { winner: data.winner, reason: data.reason } });
+    });
   }
 
   _showOnlineButtons(isHost) {
