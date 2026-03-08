@@ -148,8 +148,8 @@ class BattleScene extends Phaser.Scene {
       down: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S),
       left: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A),
       right: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D),
-      primaryFire: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.J),
-      secondaryFire: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.K),
+      primaryFire: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.Q),
+      secondaryFire: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.E),
     };
   }
 

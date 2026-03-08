@@ -28,7 +28,7 @@ const BOT_ROSTER = [
     botClass: SpinnerBot,
     color: 0x1a8844,
     weapon: 'Drum Spinner',
-    description: 'Drum spinner. Toggle\nspinner with J.',
+    description: 'Drum spinner. Toggle\nspinner with Q.',
     stats: { speed: 80, armor: 55, weapon: 85 }
   },
   {
@@ -37,7 +37,7 @@ const BOT_ROSTER = [
     botClass: HammerBot,
     color: 0xcc8833,
     weapon: 'Hammer',
-    description: 'Overhead hammer. Press\nJ to slam opponents.',
+    description: 'Overhead hammer. Press\nQ to slam opponents.',
     stats: { speed: 55, armor: 85, weapon: 75 }
   }
 ];
