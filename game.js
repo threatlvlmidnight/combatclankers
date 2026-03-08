@@ -7,7 +7,7 @@ const config = {
     default: 'arcade',
     arcade: { debug: false, gravity: { x: 0, y: 0 } }
   },
-  scene: [MenuScene, BattleScene, UIScene]
+  scene: [MainMenuScene, ModeSelectScene, BotSelectScene, GarageScene, OnlineLobbyScene, OnlineBotSelectScene, BattleScene, UIScene]
 };
 
 window.game = new Phaser.Game(config);

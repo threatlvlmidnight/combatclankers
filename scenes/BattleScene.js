@@ -13,6 +13,7 @@ class BattleScene extends Phaser.Scene {
     this.isHost = data?.isHost || false;
     this._clientInput = { u: 0, d: 0, l: 0, r: 0 };
     this._stateTimer = 0;
+    this._inputTimer = 0;
   }
 
   create() {
@@ -144,12 +145,13 @@ class BattleScene extends Phaser.Scene {
     this.physics.add.collider(this.playerBot, this.walls);
     this.physics.add.collider(this.aiBot, this.walls);
     this.physics.add.collider(this.playerBot, this.aiBot, this.handleBotCollision, null, this);
-    this.physics.add.overlap(this.playerBot, this.pitZone, () => this.knockOut(this.playerBot, 'pit'));
-    this.physics.add.overlap(this.aiBot, this.pitZone, () => this.knockOut(this.aiBot, 'pit'));
+    this.physics.add.overlap(this.playerBot, this.pitZone, () => { if (!this.isOnline || this.isHost) this.knockOut(this.playerBot, 'pit'); });
+    this.physics.add.overlap(this.aiBot, this.pitZone, () => { if (!this.isOnline || this.isHost) this.knockOut(this.aiBot, 'pit'); });
   }
 
   handleBotCollision(bot1, bot2) {
     if (this.gameOver) return;
+    if (this.isOnline && !this.isHost) return; // client: host is authoritative for damage
     const dvx = bot1.body.velocity.x - bot2.body.velocity.x;
     const dvy = bot1.body.velocity.y - bot2.body.velocity.y;
     const relSpeed = Math.sqrt(dvx * dvx + dvy * dvy);
@@ -244,8 +246,9 @@ class BattleScene extends Phaser.Scene {
       this._stateTimer += delta;
       if (this._stateTimer >= 50) { this._stateTimer = 0; this._sendState(); }
     } else {
-      // Client: send inputs, zero velocities (host owns physics)
-      this._sendInput();
+      // Client: send inputs (throttled ~20 Hz), zero velocities (host owns physics)
+      this._inputTimer += delta;
+      if (this._inputTimer >= 50) { this._inputTimer = 0; this._sendInput(); }
       if (this.playerBot?.body) { this.playerBot.body.setVelocity(0, 0); this.playerBot.setAngularVelocity(0); }
       if (this.aiBot?.body) { this.aiBot.body.setVelocity(0, 0); this.aiBot.setAngularVelocity(0); }
     }
@@ -328,7 +331,7 @@ class BattleScene extends Phaser.Scene {
   // Dispatch incoming network messages
   _onNetMessage(msg) {
     if (this.isHost) {
-      if (msg.type === 'input') this._clientInput = msg;
+      if (msg.type === 'input') { const { u, d, l, r } = msg; this._clientInput = { u, d, l, r }; }
     } else {
       if (msg.type === 'state') {
         this.playerBot.setPosition(msg.p.x, msg.p.y);
