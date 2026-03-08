@@ -39,10 +39,11 @@ class OnlineLobbyScene extends Phaser.Scene {
     });
 
     // Poll until PeerJS assigns an ID
-    const poll = setInterval(() => {
+    this._poll = setInterval(() => {
       const id = NET.getPeerId();
       if (id) {
-        clearInterval(poll);
+        clearInterval(this._poll);
+        this._poll = null;
         this.roomCodeText.setText(id);
         this.statusText.setText('Share this code with your opponent.\nWaiting for them to join...');
       }
@@ -96,7 +97,9 @@ class OnlineLobbyScene extends Phaser.Scene {
   }
 
   cleanup() {
+    if (this._poll) { clearInterval(this._poll); this._poll = null; }
     if (this.inputEl) { this.inputEl.remove(); this.inputEl = null; }
+    this.time.removeAllEvents();
   }
 
   makeButton(x, y, label, color, hoverColor, onClick) {
