@@ -110,8 +110,16 @@ class UIScene extends Phaser.Scene {
     btn.on('pointerover', () => { btn.setFillStyle(0xff4400); });
     btn.on('pointerout', () => { btn.setFillStyle(0xcc2200); });
     btn.on('pointerdown', () => {
+      console.log('[UIScene] MAIN MENU button clicked');
+      console.log('[UIScene] battleScene ref:', this.battleScene);
+      console.log('[UIScene] battleScene status:', this.battleScene?.scene?.settings?.status);
       btn.disableInteractive();
-      this.battleScene.events.emit('returnToMenu', { winner: data.winner, reason: data.reason });
+      try {
+        this.battleScene.events.emit('returnToMenu', { winner: data.winner, reason: data.reason });
+        console.log('[UIScene] returnToMenu event emitted');
+      } catch (e) {
+        console.error('[UIScene] Error emitting returnToMenu:', e);
+      }
     });
   }
 

@@ -44,17 +44,36 @@ class BattleScene extends Phaser.Scene {
     // properly stops itself, whereas scene.start() from a launched scene (UIScene)
     // leaves BattleScene running and blocks the transition.
     this.events.on('returnToMenu', (result) => {
-      this.scene.stop('UIScene');
-      this.scene.start('MainMenuScene', { result });
+      console.log('[BattleScene] returnToMenu received, result:', result);
+      console.log('[BattleScene] scene status:', this.scene.settings.status);
+      console.log('[BattleScene] UIScene active:', this.scene.isActive('UIScene'));
+      try {
+        this.scene.stop('UIScene');
+        console.log('[BattleScene] UIScene stopped');
+        this.scene.start('MainMenuScene', { result });
+        console.log('[BattleScene] MainMenuScene start called');
+      } catch (e) {
+        console.error('[BattleScene] TRANSITION ERROR:', e);
+      }
     });
     this.events.on('returnToMainMenu', () => {
-      NET.destroy();
-      this.scene.stop('UIScene');
-      this.scene.start('MainMenuScene');
+      console.log('[BattleScene] returnToMainMenu received');
+      try {
+        NET.destroy();
+        this.scene.stop('UIScene');
+        this.scene.start('MainMenuScene');
+      } catch (e) {
+        console.error('[BattleScene] TRANSITION ERROR:', e);
+      }
     });
     this.events.on('returnToOnlineSelect', (opts) => {
-      this.scene.stop('UIScene');
-      this.scene.start('OnlineBotSelectScene', opts);
+      console.log('[BattleScene] returnToOnlineSelect received');
+      try {
+        this.scene.stop('UIScene');
+        this.scene.start('OnlineBotSelectScene', opts);
+      } catch (e) {
+        console.error('[BattleScene] TRANSITION ERROR:', e);
+      }
     });
   }
 
@@ -267,11 +286,10 @@ class BattleScene extends Phaser.Scene {
     if (bot.shadow) bot.shadow.setVisible(false);
     if (bot.nameLabel) bot.nameLabel.setVisible(false);
 
+    console.log('[BattleScene] knockOut — emitting gameOver:', { winner, reason, isOnline: this.isOnline });
     this.events.emit('gameOver', { winner, reason, isOnline: this.isOnline, isHost: this.isHost });
 
     if (this.isOnline && this.isHost) NET.send({ type: 'go', winner, reason });
-
-    // Solo: UIScene shows MAIN MENU button. Online: UIScene shows Play Again / Main Menu buttons.
   }
 
   createExplosion(x, y) {

@@ -12,6 +12,7 @@ class MainMenuScene extends Phaser.Scene {
   }
 
   create() {
+    console.log('[MainMenuScene] create() called, resultData:', this.resultData);
     const cx = 450;
     this.drawBackground();
 
