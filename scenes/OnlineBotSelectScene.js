@@ -1,3 +1,4 @@
+// scenes/OnlineBotSelectScene.js
 class OnlineBotSelectScene extends Phaser.Scene {
   constructor() {
     super({ key: 'OnlineBotSelectScene' });
@@ -49,6 +50,10 @@ class OnlineBotSelectScene extends Phaser.Scene {
           isHost: false
         });
       }
+    });
+
+    this.events.once('shutdown', () => {
+      NET.onMessage(null);
     });
 
     this.makeBackButton(() => { NET.destroy(); this.scene.start('OnlineLobbyScene'); });
