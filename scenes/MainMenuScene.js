@@ -1,5 +1,5 @@
 // scenes/MainMenuScene.js
-const GAME_VERSION = 'v0.2.2';
+const GAME_VERSION = 'v0.2.3';
 
 class MainMenuScene extends Phaser.Scene {
   constructor() {

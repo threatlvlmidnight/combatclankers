@@ -73,7 +73,7 @@ class OnlineBotSelectScene extends Phaser.Scene {
         this.statusText.setText('Opponent picked their bot!');
         if (this.selectedKey) this.enableFight();
       } else if (!this.isHost && msg.type === 'start') {
-        this.scene.start('BattleScene', {
+        this.scene.start('PreBattleLoadingScene', {
           playerBotKey: msg.playerBotKey,
           aiBotKey: msg.aiBotKey,
           isOnline: true,
@@ -211,7 +211,7 @@ class OnlineBotSelectScene extends Phaser.Scene {
   startFight() {
     if (!this.selectedKey || !this.opponentKey) return;
     NET.send({ type: 'start', playerBotKey: this.selectedKey, aiBotKey: this.opponentKey });
-    this.scene.start('BattleScene', {
+    this.scene.start('PreBattleLoadingScene', {
       playerBotKey: this.selectedKey,
       aiBotKey: this.opponentKey,
       isOnline: true,

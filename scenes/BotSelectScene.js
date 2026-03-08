@@ -190,7 +190,7 @@ class BotSelectScene extends Phaser.Scene {
     const aiBotDef = others.length > 0
       ? others[Math.floor(Math.random() * others.length)]
       : BOT_ROSTER[0];
-    this.scene.start('BattleScene', {
+    this.scene.start('PreBattleLoadingScene', {
       playerBotKey: this.selectedKey,
       aiBotKey: aiBotDef.key
     });

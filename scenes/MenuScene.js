@@ -59,7 +59,7 @@ class MenuScene extends Phaser.Scene {
 
     btn.on('pointerover', () => { btn.setFillStyle(0xff4400); btnText.setColor('#ffcc00'); });
     btn.on('pointerout', () => { btn.setFillStyle(0xcc2200); btnText.setColor('#ffffff'); });
-    btn.on('pointerdown', () => this.scene.start('BattleScene'));
+    btn.on('pointerdown', () => this.scene.start('PreBattleLoadingScene'));
 
     // Controls hint
     this.add.text(cx, btnY + 65, 'W/S: Throttle  |  A/D: Turn  |  J: Primary Fire  |  K: Secondary Fire', {
