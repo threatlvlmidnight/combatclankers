@@ -4,7 +4,7 @@ class WedgeBot2 extends Bot {
       key: 'wedgebot2',
       color: 0xaa1111,
       wedgeColor: 0xdd4444,
-      hp: 100,
+      hp: 300,
       driveHP: 50,
       weaponHP: 30,
       speed: 205,

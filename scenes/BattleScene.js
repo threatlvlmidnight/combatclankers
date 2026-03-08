@@ -339,12 +339,46 @@ class BattleScene extends Phaser.Scene {
 
   // HOST: send authoritative game state to client at 20 Hz
   _sendState() {
+    const p = this.playerBot, a = this.aiBot;
     NET.send({
       type: 'state',
-      p: { x: this.playerBot.x, y: this.playerBot.y, rot: this.playerBot.rotation, hp: this.playerBot.hp, driveHP: this.playerBot.driveHP },
-      a: { x: this.aiBot.x, y: this.aiBot.y, rot: this.aiBot.rotation, hp: this.aiBot.hp, driveHP: this.aiBot.driveHP },
+      p: {
+        x: p.x, y: p.y, rot: p.rotation, hp: p.hp, driveHP: p.driveHP,
+        sa: p.spinnerActive || false, sang: p.spinnerAngle || 0,
+        hs: p.hammerSwinging || false, ha: p._hammerAngle ?? -0.9, sg: p._swingGlow || false
+      },
+      a: {
+        x: a.x, y: a.y, rot: a.rotation, hp: a.hp, driveHP: a.driveHP,
+        sa: a.spinnerActive || false, sang: a.spinnerAngle || 0,
+        hs: a.hammerSwinging || false, ha: a._hammerAngle ?? -0.9, sg: a._swingGlow || false
+      },
       timer: this.matchTimer
     });
+  }
+
+  // CLIENT: apply weapon state from network packet to a bot and refresh its graphics
+  _applyWeaponState(bot, d) {
+    if (bot.spinnerActive !== undefined) {
+      const wasActive = bot.spinnerActive;
+      bot.spinnerActive = d.sa;
+      bot.spinnerAngle = d.sang;
+      if (wasActive !== d.sa && bot._statusLabel) {
+        bot._statusLabel.setText(d.sa ? 'SPIN: ON' : 'SPIN: OFF');
+        bot._statusLabel.setColor(d.sa ? '#44ff88' : '#226633');
+      }
+      bot._updateSpinnerGfx?.();
+    }
+    if (bot._hammerAngle !== undefined) {
+      const wasSwinging = bot.hammerSwinging;
+      bot.hammerSwinging = d.hs;
+      bot._hammerAngle = d.ha;
+      bot._swingGlow = d.sg;
+      if (wasSwinging !== d.hs && bot._statusLabel) {
+        bot._statusLabel.setText(d.hs ? 'SWINGING!' : 'HAMMER READY');
+        bot._statusLabel.setColor(d.hs ? '#ffaa22' : '#886622');
+      }
+      bot._updateHammerGfx?.();
+    }
   }
 
   // Dispatch incoming network messages
@@ -357,10 +391,12 @@ class BattleScene extends Phaser.Scene {
         this.playerBot.setRotation(msg.p.rot);
         this.playerBot.hp = msg.p.hp;
         this.playerBot.driveHP = msg.p.driveHP;
+        this._applyWeaponState(this.playerBot, msg.p);
         this.aiBot.setPosition(msg.a.x, msg.a.y);
         this.aiBot.setRotation(msg.a.rot);
         this.aiBot.hp = msg.a.hp;
         this.aiBot.driveHP = msg.a.driveHP;
+        this._applyWeaponState(this.aiBot, msg.a);
         this.matchTimer = msg.timer;
       } else if (msg.type === 'go') {
         this._onRemoteGameOver(msg);

@@ -58,18 +58,24 @@ class SpinnerBot extends Bot {
     const jDown = keys.primaryFire.isDown;
     if (jDown && !this._jWasDown) {
       this.spinnerActive = !this.spinnerActive;
-      this._statusLabel.setText(this.spinnerActive ? 'SPIN: ON' : 'SPIN: OFF');
-      this._statusLabel.setColor(this.spinnerActive ? '#44ff88' : '#226633');
+      if (this._statusLabel) {
+        this._statusLabel.setText(this.spinnerActive ? 'SPIN: ON' : 'SPIN: OFF');
+        this._statusLabel.setColor(this.spinnerActive ? '#44ff88' : '#226633');
+      }
     }
     this._jWasDown = jDown;
 
+    if (this.spinnerActive) this.spinnerAngle += delta * 0.014;
+    this._updateSpinnerGfx();
+  }
+
+  _updateSpinnerGfx() {
     const drumX = this.x + Math.cos(this.rotation) * 20;
     const drumY = this.y + Math.sin(this.rotation) * 20;
 
     // Ring: always draw, color varies
     this._ringGfx.clear();
     if (this.spinnerActive) {
-      // Bright pulsing ring
       const pulse = 0.7 + 0.3 * Math.sin(this.spinnerAngle * 3);
       this._ringGfx.lineStyle(3, 0x44ffaa, pulse);
     } else {
@@ -78,7 +84,6 @@ class SpinnerBot extends Bot {
     this._ringGfx.strokeCircle(drumX, drumY, 16);
 
     if (this.spinnerActive) {
-      this.spinnerAngle += delta * 0.014;
       this._drawBlades(drumX, drumY);
     } else {
       this._spinGfx.clear();
