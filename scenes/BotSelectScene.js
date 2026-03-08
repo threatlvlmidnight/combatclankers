@@ -19,17 +19,18 @@ class BotSelectScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     // Container holds all cards — scrolled horizontally
+    const allBots = [...BOT_ROSTER, ...CUSTOM_ROSTER];
     const SPACING = 330;
     const CARD_W = 300;
     const VISIBLE = 2; // bots visible at once (3rd partially)
-    this._maxScroll = Math.max(0, BOT_ROSTER.length - VISIBLE);
+    this._maxScroll = Math.max(0, allBots.length - VISIBLE);
     this._spacing = SPACING;
 
     // Initial container X: first card's left edge at x=25
     this._containerBaseX = 25 + CARD_W / 2; // = 175 → first card center at 175
     this.cardContainer = this.add.container(0, 0);
 
-    BOT_ROSTER.forEach((botDef, i) => {
+    allBots.forEach((botDef, i) => {
       this._createBotCard(this._containerBaseX + i * SPACING, 320, botDef);
     });
 
@@ -184,7 +185,8 @@ class BotSelectScene extends Phaser.Scene {
 
   startFight() {
     if (!this.selectedKey) return;
-    const others = BOT_ROSTER.filter(b => b.key !== this.selectedKey);
+    const allBots = [...BOT_ROSTER, ...CUSTOM_ROSTER];
+    const others = allBots.filter(b => b.key !== this.selectedKey);
     const aiBotDef = others.length > 0
       ? others[Math.floor(Math.random() * others.length)]
       : BOT_ROSTER[0];

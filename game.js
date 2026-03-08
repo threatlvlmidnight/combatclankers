@@ -10,4 +10,5 @@ const config = {
   scene: [MainMenuScene, ModeSelectScene, BotSelectScene, GarageScene, OnlineLobbyScene, OnlineBotSelectScene, BattleScene, UIScene]
 };
 
+loadCustomRoster();
 window.game = new Phaser.Game(config);

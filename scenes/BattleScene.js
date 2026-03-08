@@ -126,12 +126,13 @@ class BattleScene extends Phaser.Scene {
   }
 
   createBots() {
-    const playerDef = BOT_ROSTER.find(b => b.key === this.playerBotKey) || BOT_ROSTER[0];
-    const aiDef = BOT_ROSTER.find(b => b.key === this.aiBotKey) || BOT_ROSTER[1] || BOT_ROSTER[0];
+    const allBots = [...BOT_ROSTER, ...CUSTOM_ROSTER];
+    const playerDef = allBots.find(b => b.key === this.playerBotKey) || BOT_ROSTER[0];
+    const aiDef = allBots.find(b => b.key === this.aiBotKey) || BOT_ROSTER[1] || BOT_ROSTER[0];
     this.playerBotDef = playerDef;
     this.aiBotDef = aiDef;
-    this.playerBot = new playerDef.botClass(this, 150, 343);
-    this.aiBot = new aiDef.botClass(this, 680, 200);
+    this.playerBot = new playerDef.botClass(this, 150, 343, playerDef);
+    this.aiBot = new aiDef.botClass(this, 680, 200, aiDef);
     // Override constructor rotations so bots always face each other regardless of which bot was picked
     this.playerBot.setRotation(0);       // left side faces right
     this.aiBot.setRotation(Math.PI);     // right side faces left
