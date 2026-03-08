@@ -38,6 +38,24 @@ class BattleScene extends Phaser.Scene {
       NET.onMessage(msg => this._onNetMessage(msg));
       NET.onClose(() => this._onDisconnect());
     }
+
+    // Listen for UIScene navigation requests.
+    // BattleScene owns transitions because scene.start() from a started scene
+    // properly stops itself, whereas scene.start() from a launched scene (UIScene)
+    // leaves BattleScene running and blocks the transition.
+    this.events.on('returnToMenu', (result) => {
+      this.scene.stop('UIScene');
+      this.scene.start('MainMenuScene', { result });
+    });
+    this.events.on('returnToMainMenu', () => {
+      NET.destroy();
+      this.scene.stop('UIScene');
+      this.scene.start('MainMenuScene');
+    });
+    this.events.on('returnToOnlineSelect', (opts) => {
+      this.scene.stop('UIScene');
+      this.scene.start('OnlineBotSelectScene', opts);
+    });
   }
 
   createArena() {

@@ -104,16 +104,14 @@ class UIScene extends Phaser.Scene {
 
   _showSoloButton(data) {
     const btn = this.add.rectangle(450, 405, 200, 40, 0xcc2200).setDepth(50).setInteractive({ useHandCursor: true });
-    const txt = this.add.text(450, 405, '◄ MAIN MENU', {
+    this.add.text(450, 405, '◄ MAIN MENU', {
       fontSize: '16px', color: '#ffffff', fontFamily: 'monospace', fontStyle: 'bold'
     }).setOrigin(0.5).setDepth(51);
     btn.on('pointerover', () => { btn.setFillStyle(0xff4400); });
     btn.on('pointerout', () => { btn.setFillStyle(0xcc2200); });
     btn.on('pointerdown', () => {
-      const result = { winner: data.winner, reason: data.reason };
-      this.scene.start('MainMenuScene', { result });
-      this.scene.stop('BattleScene');
-      this.scene.stop('UIScene');
+      btn.disableInteractive();
+      this.battleScene.events.emit('returnToMenu', { winner: data.winner, reason: data.reason });
     });
   }
 
@@ -124,9 +122,8 @@ class UIScene extends Phaser.Scene {
     playAgain.on('pointerover', () => playAgain.setColor('#88ffaa'));
     playAgain.on('pointerout', () => playAgain.setColor('#44cc66'));
     playAgain.on('pointerdown', () => {
-      this.scene.stop('BattleScene');
-      this.scene.stop('UIScene');
-      this.scene.start('OnlineBotSelectScene', { isHost });
+      playAgain.disableInteractive();
+      this.battleScene.events.emit('returnToOnlineSelect', { isHost });
     });
 
     const mainMenu = this.add.text(510, 378, '◄ MAIN MENU', {
@@ -135,10 +132,8 @@ class UIScene extends Phaser.Scene {
     mainMenu.on('pointerover', () => mainMenu.setColor('#aabbcc'));
     mainMenu.on('pointerout', () => mainMenu.setColor('#667788'));
     mainMenu.on('pointerdown', () => {
-      NET.destroy();
-      this.scene.stop('BattleScene');
-      this.scene.stop('UIScene');
-      this.scene.start('MainMenuScene');
+      mainMenu.disableInteractive();
+      this.battleScene.events.emit('returnToMainMenu');
     });
   }
 
