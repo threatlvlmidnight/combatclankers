@@ -2,8 +2,8 @@
 // Persistence layer for player progress data using localStorage
 
 class PlayerStorage {
-  static readonly STORAGE_KEY = 'battlebotsPlayerProgress';
-  static readonly LEADERBOARD_KEY = 'battlebotsLeaderboard';
+  static STORAGE_KEY = 'battlebotsPlayerProgress';
+  static LEADERBOARD_KEY = 'battlebotsLeaderboard';
 
   // Load player progress - creates new if doesn't exist
   static loadPlayer(playerName = 'Player') {

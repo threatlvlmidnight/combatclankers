@@ -2,7 +2,7 @@
 // Leaderboard management - rankings, achievements, stats
 
 class Leaderboard {
-  static readonly COLUMNS = {
+  static COLUMNS = {
     RANK: 'rank',
     PLAYER: 'player',
     LEVEL: 'level',
