@@ -19,12 +19,13 @@ class BattleScene extends Phaser.Scene {
   }
 
   createArena() {
-    this.arenaX = 100;
-    this.arenaY = 75;
-    this.arenaW = 700;
-    this.arenaH = 500;
+    this.arenaX = 35;
+    this.arenaY = 78;
+    this.arenaW = 830;
+    this.arenaH = 530;
     const cx = this.arenaX + this.arenaW / 2;
     const cy = this.arenaY + this.arenaH / 2;
+    const wallThick = 22;
 
     const g = this.add.graphics();
 
@@ -34,72 +35,78 @@ class BattleScene extends Phaser.Scene {
 
     // Grid
     g.lineStyle(1, 0x2a2a50, 0.6);
-    for (let x = this.arenaX; x <= this.arenaX + this.arenaW; x += 50) {
+    for (let x = this.arenaX; x <= this.arenaX + this.arenaW; x += 55) {
       g.beginPath(); g.moveTo(x, this.arenaY); g.lineTo(x, this.arenaY + this.arenaH); g.strokePath();
     }
-    for (let y = this.arenaY; y <= this.arenaY + this.arenaH; y += 50) {
+    for (let y = this.arenaY; y <= this.arenaY + this.arenaH; y += 55) {
       g.beginPath(); g.moveTo(this.arenaX, y); g.lineTo(this.arenaX + this.arenaW, y); g.strokePath();
     }
 
-    // Pit danger zone border
-    const pitW = 140;
-    const pitH = 140;
-    g.fillStyle(0x880000, 0.6);
-    g.fillRect(cx - pitW / 2 - 6, cy - pitH / 2 - 6, pitW + 12, pitH + 12);
+    // Pit in bottom-right corner
+    const pitW = 130;
+    const pitH = 130;
+    const pitX = this.arenaX + this.arenaW - wallThick - pitW / 2;
+    const pitY = this.arenaY + this.arenaH - wallThick - pitH / 2;
+
+    // Pit danger border (red glow in corner)
+    g.fillStyle(0x880000, 0.7);
+    g.fillRect(pitX - pitW / 2 - 6, pitY - pitH / 2 - 6, pitW + 12, pitH + 12);
 
     // Pit floor
     g.fillStyle(0x000000, 1);
-    g.fillRect(cx - pitW / 2, cy - pitH / 2, pitW, pitH);
+    g.fillRect(pitX - pitW / 2, pitY - pitH / 2, pitW, pitH);
 
     // Pit warning stripes
     for (let i = 0; i < 8; i++) {
       g.fillStyle(i % 2 === 0 ? 0xff0000 : 0x000000, 0.25);
-      g.fillRect(cx - pitW / 2 + i * 18, cy - pitH / 2, 18, pitH);
+      g.fillRect(pitX - pitW / 2 + i * 16, pitY - pitH / 2, 16, pitH);
     }
 
-    // Pit depth effect (inner shadow)
+    // Pit depth effect
     g.fillStyle(0x330000, 0.5);
-    g.fillRect(cx - pitW / 2 + 8, cy - pitH / 2 + 8, pitW - 16, pitH - 16);
+    g.fillRect(pitX - pitW / 2 + 8, pitY - pitH / 2 + 8, pitW - 16, pitH - 16);
 
     // Pit label
-    this.add.text(cx, cy, 'PIT', {
-      fontSize: '20px', color: '#ff3333', fontFamily: 'monospace', fontStyle: 'bold', alpha: 0.8
+    this.add.text(pitX, pitY, 'PIT', {
+      fontSize: '18px', color: '#ff3333', fontFamily: 'monospace', fontStyle: 'bold'
     }).setOrigin(0.5).setDepth(1);
 
+    // Corner danger indicator (arrow pointing toward pit)
+    this.add.text(pitX - pitW / 2 - 30, pitY - pitH / 2 - 22, '▼►', {
+      fontSize: '14px', color: '#ff4444', fontFamily: 'monospace'
+    }).setDepth(1);
+
     // Walls (static physics bodies)
-    const wallThick = 22;
     const wallColor = 0x556677;
     this.walls = this.physics.add.staticGroup();
 
     const addWall = (wx, wy, ww, wh) => {
       const rect = this.add.rectangle(wx, wy, ww, wh, wallColor).setDepth(2);
-      this.walls.add(rect); // staticGroup creates the static body
-
-      // Wall highlight
+      this.walls.add(rect);
       const hi = this.add.graphics().setDepth(3);
       hi.lineStyle(2, 0x8899aa, 0.8);
       hi.strokeRect(wx - ww / 2, wy - wh / 2, ww, wh);
     };
 
-    // Top, bottom, left, right
     addWall(cx, this.arenaY + wallThick / 2, this.arenaW, wallThick);
     addWall(cx, this.arenaY + this.arenaH - wallThick / 2, this.arenaW, wallThick);
     addWall(this.arenaX + wallThick / 2, cy, wallThick, this.arenaH);
     addWall(this.arenaX + this.arenaW - wallThick / 2, cy, wallThick, this.arenaH);
 
     // Pit zone (overlap trigger)
-    this.pitZone = this.add.zone(cx, cy, pitW, pitH);
+    this.pitZone = this.add.zone(pitX, pitY, pitW, pitH);
     this.physics.add.existing(this.pitZone, true);
 
-    this.pitX = cx;
-    this.pitY = cy;
+    this.pitX = pitX;
+    this.pitY = pitY;
     this.pitW = pitW;
     this.pitH = pitH;
   }
 
   createBots() {
-    this.playerBot = new WedgeBot1(this, 230, 325);
-    this.aiBot = new WedgeBot2(this, 670, 325);
+    // Spawn on opposite side from the pit (which is bottom-right)
+    this.playerBot = new WedgeBot1(this, 150, 343);
+    this.aiBot = new WedgeBot2(this, 680, 200);
     this.botAI = new BotAI(this.aiBot, this.playerBot, { x: this.pitX, y: this.pitY, w: this.pitW, h: this.pitH });
   }
 
