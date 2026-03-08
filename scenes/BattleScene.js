@@ -255,9 +255,20 @@ class BattleScene extends Phaser.Scene {
 
     // Solo: auto-return after 3s. Online: UIScene shows Play Again / Main Menu buttons.
     if (!this.isOnline) {
-      this.time.delayedCall(3000, () => {
-        this.scene.stop('UIScene');
-        this.scene.start('MainMenuScene', { result: { winner, reason, playerBotName: this.playerBotDef?.name, aiBotName: this.aiBotDef?.name } });
+      const goToMenu = () => {
+        try {
+          this.scene.stop('UIScene');
+          this.scene.start('MainMenuScene', { result: { winner, reason, playerBotName: this.playerBotDef?.name, aiBotName: this.aiBotDef?.name } });
+        } catch (e) {
+          console.error('Scene transition error:', e);
+          this.scene.stop('UIScene');
+          this.scene.start('MainMenuScene');
+        }
+      };
+      this.time.delayedCall(3000, goToMenu);
+      // Fallback: click anywhere to return immediately after 1s
+      this.time.delayedCall(1000, () => {
+        this.input.once('pointerdown', goToMenu);
       });
     }
   }
@@ -333,6 +344,7 @@ class BattleScene extends Phaser.Scene {
       this.updatePlayerMovement();
       this.playerBot.updateWeapon?.(this.keys, delta, this.aiBot);
       this.botAI.update(delta);
+      this.aiBot.updateWeapon?.(this.botAI.getWeaponKeys(delta), delta, this.playerBot);
     } else if (this.isHost) {
       this.updatePlayerMovement();
       this.playerBot.updateWeapon?.(this.keys, delta, this.aiBot);
@@ -384,10 +396,18 @@ class BattleScene extends Phaser.Scene {
     if (this.isOnline && this.isHost) NET.send({ type: 'go', winner, reason: 'time' });
 
     if (!this.isOnline) {
-      this.time.delayedCall(3000, () => {
-        this.scene.stop('UIScene');
-        this.scene.start('MainMenuScene', { result: { winner, reason: 'time', playerBotName: this.playerBotDef?.name, aiBotName: this.aiBotDef?.name } });
-      });
+      const goToMenu = () => {
+        try {
+          this.scene.stop('UIScene');
+          this.scene.start('MainMenuScene', { result: { winner, reason: 'time', playerBotName: this.playerBotDef?.name, aiBotName: this.aiBotDef?.name } });
+        } catch (e) {
+          console.error('Scene transition error:', e);
+          this.scene.stop('UIScene');
+          this.scene.start('MainMenuScene');
+        }
+      };
+      this.time.delayedCall(3000, goToMenu);
+      this.time.delayedCall(1000, () => { this.input.once('pointerdown', goToMenu); });
     }
   }
 

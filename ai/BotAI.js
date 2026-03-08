@@ -8,6 +8,44 @@ class BotAI {
     this.lastHP = bot.hp;
     this.stuckTimer = 0;
     this.lastPos = { x: bot.x, y: bot.y };
+    // Weapon fire state — pulsed for edge-triggered weapons
+    this._weaponPulse = false;
+    this._weaponPulseTimer = 0;
+    this._weaponStarted = false; // for toggle weapons (spinner)
+  }
+
+  getWeaponKeys(delta) {
+    const bot = this.bot;
+    const dist = Phaser.Math.Distance.Between(bot.x, bot.y, this.target.x, this.target.y);
+
+    // Spinner: toggle on once at start, then leave active
+    if (bot.spinnerActive !== undefined) {
+      if (!this._weaponStarted) {
+        this._weaponStarted = true;
+        this._weaponPulse = true;
+      } else {
+        this._weaponPulse = false;
+      }
+      return { primaryFire: { isDown: this._weaponPulse } };
+    }
+
+    // Crusher: hold J while in grab range
+    if (bot.crushGrabActive !== undefined) {
+      const wantFire = dist < 60;
+      const keys = { primaryFire: { isDown: wantFire } };
+      return keys;
+    }
+
+    // Hammer, Flipper: pulse J when close enough
+    const fireRange = bot.flipCharge !== undefined ? 160 : 130;
+    this._weaponPulseTimer -= delta;
+    if (dist < fireRange && this._weaponPulseTimer <= 0) {
+      this._weaponPulse = true;
+      this._weaponPulseTimer = 1200; // refire every 1.2s max
+    } else {
+      this._weaponPulse = false;
+    }
+    return { primaryFire: { isDown: this._weaponPulse } };
   }
 
   update(delta) {
