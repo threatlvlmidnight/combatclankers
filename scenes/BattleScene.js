@@ -390,12 +390,14 @@ class BattleScene extends Phaser.Scene {
       p: {
         x: p.x, y: p.y, rot: p.rotation, hp: p.hp, driveHP: p.driveHP,
         sa: p.spinnerActive || false, sang: p.spinnerAngle || 0, sen: p.spinEnergy || 0,
-        hs: p.hammerSwinging || false, ha: p._hammerAngle ?? -0.9, sg: p._swingGlow || false
+        hs: p.hammerSwinging || false, ha: p._hammerAngle ?? -0.9, sg: p._swingGlow || false,
+        fc: p.flipCharge ?? 100, fa: p._flipArmAngle || 0,
       },
       a: {
         x: a.x, y: a.y, rot: a.rotation, hp: a.hp, driveHP: a.driveHP,
         sa: a.spinnerActive || false, sang: a.spinnerAngle || 0, sen: a.spinEnergy || 0,
-        hs: a.hammerSwinging || false, ha: a._hammerAngle ?? -0.9, sg: a._swingGlow || false
+        hs: a.hammerSwinging || false, ha: a._hammerAngle ?? -0.9, sg: a._swingGlow || false,
+        fc: a.flipCharge ?? 100, fa: a._flipArmAngle || 0,
       },
       timer: this.matchTimer
     });
@@ -428,6 +430,12 @@ class BattleScene extends Phaser.Scene {
         bot._statusLabel.setColor(d.hs ? '#ffaa22' : '#886622');
       }
       bot._updateHammerGfx?.();
+    }
+    if (bot.flipCharge !== undefined) {
+      bot.flipCharge = d.fc ?? 100;
+      bot._flipArmAngle = d.fa || 0;
+      bot._updateFlipperGfx?.();
+      bot._updateStatusLabel?.();
     }
   }
 
