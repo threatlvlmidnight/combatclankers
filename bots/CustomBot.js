@@ -176,6 +176,7 @@ class CustomBot extends Bot {
 
   // Delegating wrapper methods for weapon graphics updates
   _updateSpinnerGfx() { SpinnerBot.prototype._updateSpinnerGfx.call(this); }
+  _drawBlades(drumX, drumY) { SpinnerBot.prototype._drawBlades.call(this, drumX, drumY); }
   _updateHammerGfx() { HammerBot.prototype._updateHammerGfx.call(this); }
   _updateFlipperGfx() { FlipperBot.prototype._updateFlipperGfx.call(this); }
   _updateClawGfx() { CrusherBot.prototype._updateClawGfx.call(this); }

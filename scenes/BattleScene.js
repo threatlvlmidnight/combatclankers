@@ -182,7 +182,14 @@ class BattleScene extends Phaser.Scene {
     const applySpinner = (spinner, victim) => {
       if (!spinner.spinnerActive || !(spinner.spinEnergy > 0)) return 1.0;
       const ratio = spinner.spinEnergy / 100;
-      const mult = GAME_CONFIG.weapons.spinnerMultiplier * ratio;
+      let mult = GAME_CONFIG.weapons.spinnerMultiplier * ratio;
+
+      // Bonus damage for near-max energy hits on lighter bots
+      // High energy + low victim armor = increased crit chance
+      if (ratio > 0.90 && victim._damageReduction !== undefined && victim._damageReduction < 0.3) {
+        // Extra damage bonus for full-charge hits on low-armor targets
+        mult *= 1.35; // 35% bonus damage
+      }
 
       // Knockback impulse on victim
       const kb = GAME_CONFIG.spinners.knockbackBase * ratio;
