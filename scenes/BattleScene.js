@@ -392,12 +392,14 @@ class BattleScene extends Phaser.Scene {
         sa: p.spinnerActive || false, sang: p.spinnerAngle || 0, sen: p.spinEnergy || 0,
         hs: p.hammerSwinging || false, ha: p._hammerAngle ?? -0.9, sg: p._swingGlow || false,
         fc: p.flipCharge ?? 100, fa: p._flipArmAngle || 0,
+        cg: p.crushGrabActive || false,
       },
       a: {
         x: a.x, y: a.y, rot: a.rotation, hp: a.hp, driveHP: a.driveHP,
         sa: a.spinnerActive || false, sang: a.spinnerAngle || 0, sen: a.spinEnergy || 0,
         hs: a.hammerSwinging || false, ha: a._hammerAngle ?? -0.9, sg: a._swingGlow || false,
         fc: a.flipCharge ?? 100, fa: a._flipArmAngle || 0,
+        cg: a.crushGrabActive || false,
       },
       timer: this.matchTimer
     });
@@ -436,6 +438,16 @@ class BattleScene extends Phaser.Scene {
       bot._flipArmAngle = d.fa || 0;
       bot._updateFlipperGfx?.();
       bot._updateStatusLabel?.();
+    }
+    if (bot.crushGrabActive !== undefined) {
+      const wasGrabbed = bot.crushGrabActive;
+      bot.crushGrabActive = d.cg;
+      bot._clawAngle = d.cg ? 0.05 : (bot._clawAngle ?? 0.5);
+      if (wasGrabbed !== d.cg && bot._statusLabel) {
+        bot._statusLabel.setText(d.cg ? 'JAWS: LOCKED!' : 'JAWS: OPEN');
+        bot._statusLabel.setColor(d.cg ? '#ff4422' : '#884422');
+      }
+      bot._updateClawGfx?.();
     }
   }
 
