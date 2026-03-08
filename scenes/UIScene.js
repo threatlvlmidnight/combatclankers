@@ -6,22 +6,27 @@ class UIScene extends Phaser.Scene {
   create() {
     this.battleScene = this.scene.get('BattleScene');
 
+    const pDef = this.battleScene.playerBotDef || BOT_ROSTER[0];
+    const aDef = this.battleScene.aiBotDef || BOT_ROSTER[1] || BOT_ROSTER[0];
+    const pColorHex = '#' + pDef.color.toString(16).padStart(6, '0');
+    const aColorHex = '#' + aDef.color.toString(16).padStart(6, '0');
+
     // --- Player (left) ---
-    this.add.text(25, 18, 'CRUSHER', {
-      fontSize: '13px', color: '#4a9fd4', fontFamily: 'monospace', fontStyle: 'bold'
+    this.add.text(25, 18, pDef.name, {
+      fontSize: '13px', color: pColorHex, fontFamily: 'monospace', fontStyle: 'bold'
     });
     this.add.rectangle(25, 37, 210, 14, 0x222233).setOrigin(0);
-    this.playerHPBar = this.add.rectangle(25, 37, 210, 14, 0x1a5fb4).setOrigin(0);
+    this.playerHPBar = this.add.rectangle(25, 37, 210, 14, pDef.color).setOrigin(0);
     this.add.text(25, 53, 'DRIVE', { fontSize: '9px', color: '#446655', fontFamily: 'monospace' });
     this.add.rectangle(25, 63, 210, 7, 0x111122).setOrigin(0);
     this.playerDriveBar = this.add.rectangle(25, 63, 210, 7, 0x22aa55).setOrigin(0);
 
     // --- AI (right) ---
-    this.add.text(875, 18, 'RAMPAGE', {
-      fontSize: '13px', color: '#dd4444', fontFamily: 'monospace', fontStyle: 'bold'
+    this.add.text(875, 18, aDef.name, {
+      fontSize: '13px', color: aColorHex, fontFamily: 'monospace', fontStyle: 'bold'
     }).setOrigin(1, 0);
     this.add.rectangle(875, 37, 210, 14, 0x222233).setOrigin(1, 0);
-    this.aiHPBar = this.add.rectangle(875, 37, 210, 14, 0xaa1111).setOrigin(1, 0);
+    this.aiHPBar = this.add.rectangle(875, 37, 210, 14, aDef.color).setOrigin(1, 0);
     this.add.text(875, 53, 'DRIVE', { fontSize: '9px', color: '#446655', fontFamily: 'monospace' }).setOrigin(1, 0);
     this.add.rectangle(875, 63, 210, 7, 0x111122).setOrigin(1, 0);
     this.aiDriveBar = this.add.rectangle(875, 63, 210, 7, 0x22aa55).setOrigin(1, 0);
@@ -70,13 +75,18 @@ class UIScene extends Phaser.Scene {
   }
 
   showGameOver(data) {
-    const winnerName = data.winner === 'Player' ? 'CRUSHER' : 'RAMPAGE';
-    const winColor = data.winner === 'Player' ? '#4a9fd4' : '#dd4444';
-    const loserName = data.winner === 'Player' ? 'Rampage' : 'Crusher';
+    const b = this.battleScene;
+    const pDef = b.playerBotDef || BOT_ROSTER[0];
+    const aDef = b.aiBotDef || BOT_ROSTER[1] || BOT_ROSTER[0];
+    const winnerName = data.winner === 'Player' ? pDef.name : aDef.name;
+    const loserDef = data.winner === 'Player' ? aDef : pDef;
+    const winColor = data.winner === 'Player' ? ('#' + pDef.color.toString(16).padStart(6, '0')) : ('#' + aDef.color.toString(16).padStart(6, '0'));
+    const loserName = loserDef.name.charAt(0) + loserDef.name.slice(1).toLowerCase();
     const reasons = {
       pit: `${loserName} fell into the pit!`,
       disable: `${loserName} was disabled!`,
-      time: "Time's up — judges' decision!"
+      time: "Time's up — judges' decision!",
+      disconnect: 'Opponent disconnected.'
     };
 
     this.gameOverBg.setVisible(true);
