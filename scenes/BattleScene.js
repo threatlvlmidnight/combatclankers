@@ -164,10 +164,11 @@ class BattleScene extends Phaser.Scene {
     const zone1 = this.getHitZone(bot2, bot1);
     const zone2 = this.getHitZone(bot1, bot2);
 
-    bot1.takeDamage(baseDamage, zone1);
-    bot2.takeDamage(baseDamage, zone2);
-
-    this.cameras.main.shake(120, 0.006);
+    // Active spinner deals 5× damage to whatever it hits
+    const mult1 = bot2.spinnerActive ? 5.0 : 1.0;
+    const mult2 = bot1.spinnerActive ? 5.0 : 1.0;
+    bot1.takeDamage(baseDamage * mult1, zone1);
+    bot2.takeDamage(baseDamage * mult2, zone2);
 
     if (bot1.hp <= 0) this.knockOut(bot1, 'disable');
     else if (bot2.hp <= 0) this.knockOut(bot2, 'disable');
@@ -244,10 +245,12 @@ class BattleScene extends Phaser.Scene {
 
     if (!this.isOnline) {
       this.updatePlayerMovement();
+      this.playerBot.updateWeapon?.(this.keys, delta, this.aiBot);
       this.botAI.update(delta);
     } else if (this.isHost) {
       this.updatePlayerMovement();
-      this._applyClientInput();
+      this.playerBot.updateWeapon?.(this.keys, delta, this.aiBot);
+      this._applyClientInput(delta);
       this._stateTimer += delta;
       if (this._stateTimer >= 50) { this._stateTimer = 0; this._sendState(); }
     } else {
@@ -303,7 +306,7 @@ class BattleScene extends Phaser.Scene {
   }
 
   // HOST: apply stored client input to aiBot
-  _applyClientInput() {
+  _applyClientInput(delta) {
     const bot = this.aiBot;
     const inp = this._clientInput;
     if (inp.l) bot.setAngularVelocity(-bot.rotationSpeed);
@@ -316,12 +319,13 @@ class BattleScene extends Phaser.Scene {
     } else {
       bot.body.setVelocity(bot.body.velocity.x * 0.87, bot.body.velocity.y * 0.87);
     }
+    bot.updateWeapon?.({ primaryFire: { isDown: !!inp.j } }, delta, this.playerBot);
   }
 
   // CLIENT: read local WASD and send as input packet
   _sendInput() {
     const k = this.keys;
-    NET.send({ type: 'input', u: k.up.isDown?1:0, d: k.down.isDown?1:0, l: k.left.isDown?1:0, r: k.right.isDown?1:0 });
+    NET.send({ type: 'input', u: k.up.isDown?1:0, d: k.down.isDown?1:0, l: k.left.isDown?1:0, r: k.right.isDown?1:0, j: k.primaryFire.isDown?1:0 });
   }
 
   // HOST: send authoritative game state to client at 20 Hz
@@ -337,7 +341,7 @@ class BattleScene extends Phaser.Scene {
   // Dispatch incoming network messages
   _onNetMessage(msg) {
     if (this.isHost) {
-      if (msg.type === 'input') { const { u, d, l, r } = msg; this._clientInput = { u, d, l, r }; }
+      if (msg.type === 'input') { const { u, d, l, r, j } = msg; this._clientInput = { u, d, l, r, j }; }
     } else {
       if (msg.type === 'state') {
         this.playerBot.setPosition(msg.p.x, msg.p.y);
