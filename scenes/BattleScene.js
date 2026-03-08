@@ -6,6 +6,15 @@ class BattleScene extends Phaser.Scene {
     this.gameOver = false;
   }
 
+  init(data) {
+    this.playerBotKey = data?.playerBotKey || 'crusher';
+    this.aiBotKey = data?.aiBotKey || 'rampage';
+    this.isOnline = data?.isOnline || false;
+    this.isHost = data?.isHost || false;
+    this._clientInput = { u: 0, d: 0, l: 0, r: 0 };
+    this._stateTimer = 0;
+  }
+
   create() {
     this.gameOver = false;
     this.matchTimer = this.matchDuration;
@@ -16,6 +25,11 @@ class BattleScene extends Phaser.Scene {
     this.setupPhysics();
     if (this.scene.isActive('UIScene')) this.scene.stop('UIScene');
     this.scene.launch('UIScene');
+
+    if (this.isOnline) {
+      NET.onMessage(msg => this._onNetMessage(msg));
+      NET.onClose(() => this._onDisconnect());
+    }
   }
 
   createArena() {
@@ -104,10 +118,15 @@ class BattleScene extends Phaser.Scene {
   }
 
   createBots() {
-    // Spawn on opposite side from the pit (which is bottom-right)
-    this.playerBot = new WedgeBot1(this, 150, 343);
-    this.aiBot = new WedgeBot2(this, 680, 200);
-    this.botAI = new BotAI(this.aiBot, this.playerBot, { x: this.pitX, y: this.pitY, w: this.pitW, h: this.pitH });
+    const playerDef = BOT_ROSTER.find(b => b.key === this.playerBotKey) || BOT_ROSTER[0];
+    const aiDef = BOT_ROSTER.find(b => b.key === this.aiBotKey) || BOT_ROSTER[1] || BOT_ROSTER[0];
+    this.playerBotDef = playerDef;
+    this.aiBotDef = aiDef;
+    this.playerBot = new playerDef.botClass(this, 150, 343);
+    this.aiBot = new aiDef.botClass(this, 680, 200);
+    if (!this.isOnline) {
+      this.botAI = new BotAI(this.aiBot, this.playerBot, { x: this.pitX, y: this.pitY, w: this.pitW, h: this.pitH });
+    }
   }
 
   createControls() {
@@ -173,9 +192,12 @@ class BattleScene extends Phaser.Scene {
 
     this.events.emit('gameOver', { winner, reason });
 
+    if (this.isOnline && this.isHost) NET.send({ type: 'go', winner, reason });
+
     this.time.delayedCall(3000, () => {
       this.scene.stop('UIScene');
-      this.scene.start('MenuScene', { result: { winner, reason } });
+      if (this.isOnline) NET.destroy();
+      this.scene.start('MainMenuScene', { result: { winner, reason, playerBotName: this.playerBotDef?.name, aiBotName: this.aiBotDef?.name } });
     });
   }
 
@@ -205,15 +227,28 @@ class BattleScene extends Phaser.Scene {
   update(time, delta) {
     if (this.gameOver) return;
 
-    this.matchTimer -= delta;
-    if (this.matchTimer <= 0) {
-      this.timeUp();
-      return;
+    // Only host (or solo) owns the timer
+    if (!this.isOnline || this.isHost) {
+      this.matchTimer -= delta;
+      if (this.matchTimer <= 0) { this.timeUp(); return; }
     }
 
     this.events.emit('timerUpdate', this.matchTimer);
-    this.updatePlayerMovement();
-    this.botAI.update(delta);
+
+    if (!this.isOnline) {
+      this.updatePlayerMovement();
+      this.botAI.update(delta);
+    } else if (this.isHost) {
+      this.updatePlayerMovement();
+      this._applyClientInput();
+      this._stateTimer += delta;
+      if (this._stateTimer >= 50) { this._stateTimer = 0; this._sendState(); }
+    } else {
+      // Client: send inputs, zero velocities (host owns physics)
+      this._sendInput();
+      if (this.playerBot?.body) { this.playerBot.body.setVelocity(0, 0); this.playerBot.setAngularVelocity(0); }
+      if (this.aiBot?.body) { this.aiBot.body.setVelocity(0, 0); this.aiBot.setAngularVelocity(0); }
+    }
   }
 
   updatePlayerMovement() {
@@ -248,9 +283,90 @@ class BattleScene extends Phaser.Scene {
     this.gameOver = true;
     const winner = this.playerBot.hp >= this.aiBot.hp ? 'Player' : 'AI';
     this.events.emit('gameOver', { winner, reason: 'time' });
+
+    if (this.isOnline && this.isHost) NET.send({ type: 'go', winner, reason: 'time' });
+
     this.time.delayedCall(3000, () => {
       this.scene.stop('UIScene');
-      this.scene.start('MenuScene', { result: { winner, reason: 'time' } });
+      if (this.isOnline) NET.destroy();
+      this.scene.start('MainMenuScene', { result: { winner, reason: 'time', playerBotName: this.playerBotDef?.name, aiBotName: this.aiBotDef?.name } });
+    });
+  }
+
+  // HOST: apply stored client input to aiBot
+  _applyClientInput() {
+    const bot = this.aiBot;
+    const inp = this._clientInput;
+    if (inp.l) bot.setAngularVelocity(-bot.rotationSpeed);
+    else if (inp.r) bot.setAngularVelocity(bot.rotationSpeed);
+    else bot.setAngularVelocity(0);
+    if (inp.u) {
+      bot.body.setVelocity(Math.cos(bot.rotation) * bot.botSpeed, Math.sin(bot.rotation) * bot.botSpeed);
+    } else if (inp.d) {
+      bot.body.setVelocity(-Math.cos(bot.rotation) * bot.botSpeed * 0.65, -Math.sin(bot.rotation) * bot.botSpeed * 0.65);
+    } else {
+      bot.body.setVelocity(bot.body.velocity.x * 0.87, bot.body.velocity.y * 0.87);
+    }
+  }
+
+  // CLIENT: read local WASD and send as input packet
+  _sendInput() {
+    const k = this.keys;
+    NET.send({ type: 'input', u: k.up.isDown?1:0, d: k.down.isDown?1:0, l: k.left.isDown?1:0, r: k.right.isDown?1:0 });
+  }
+
+  // HOST: send authoritative game state to client at 20 Hz
+  _sendState() {
+    NET.send({
+      type: 'state',
+      p: { x: this.playerBot.x, y: this.playerBot.y, rot: this.playerBot.rotation, hp: this.playerBot.hp, driveHP: this.playerBot.driveHP },
+      a: { x: this.aiBot.x, y: this.aiBot.y, rot: this.aiBot.rotation, hp: this.aiBot.hp, driveHP: this.aiBot.driveHP },
+      timer: this.matchTimer
+    });
+  }
+
+  // Dispatch incoming network messages
+  _onNetMessage(msg) {
+    if (this.isHost) {
+      if (msg.type === 'input') this._clientInput = msg;
+    } else {
+      if (msg.type === 'state') {
+        this.playerBot.setPosition(msg.p.x, msg.p.y);
+        this.playerBot.setRotation(msg.p.rot);
+        this.playerBot.hp = msg.p.hp;
+        this.playerBot.driveHP = msg.p.driveHP;
+        this.aiBot.setPosition(msg.a.x, msg.a.y);
+        this.aiBot.setRotation(msg.a.rot);
+        this.aiBot.hp = msg.a.hp;
+        this.aiBot.driveHP = msg.a.driveHP;
+        this.matchTimer = msg.timer;
+      } else if (msg.type === 'go') {
+        this._onRemoteGameOver(msg);
+      }
+    }
+  }
+
+  // CLIENT: host signaled game over
+  _onRemoteGameOver(msg) {
+    if (this.gameOver) return;
+    this.gameOver = true;
+    this.events.emit('gameOver', { winner: msg.winner, reason: msg.reason });
+    this.time.delayedCall(3000, () => {
+      this.scene.stop('UIScene');
+      NET.destroy();
+      this.scene.start('MainMenuScene', { result: { winner: msg.winner, reason: msg.reason, playerBotName: this.playerBotDef?.name, aiBotName: this.aiBotDef?.name } });
+    });
+  }
+
+  // Peer disconnected mid-match
+  _onDisconnect() {
+    if (this.gameOver) return;
+    this.gameOver = true;
+    this.events.emit('gameOver', { winner: 'Player', reason: 'disconnect' });
+    this.time.delayedCall(2000, () => {
+      this.scene.stop('UIScene');
+      NET.destroy();
+      this.scene.start('MainMenuScene', {});
     });
   }
 }
