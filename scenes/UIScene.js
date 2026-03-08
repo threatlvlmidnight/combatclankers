@@ -92,7 +92,38 @@ class UIScene extends Phaser.Scene {
     this.gameOverBg.setVisible(true);
     this.gameOverText.setText(`${winnerName} WINS!`).setColor(winColor).setVisible(true);
     this.gameOverSub.setText(reasons[data.reason] || '').setVisible(true);
-    this.gameOverReturn.setVisible(true);
+
+    if (data.isOnline) {
+      this.gameOverReturn.setVisible(false);
+      this._showOnlineButtons(data.isHost);
+    } else {
+      this.gameOverReturn.setVisible(true);
+    }
+  }
+
+  _showOnlineButtons(isHost) {
+    const playAgain = this.add.text(390, 378, '▶ PLAY AGAIN', {
+      fontSize: '13px', color: '#44cc66', fontFamily: 'monospace', fontStyle: 'bold'
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    playAgain.on('pointerover', () => playAgain.setColor('#88ffaa'));
+    playAgain.on('pointerout', () => playAgain.setColor('#44cc66'));
+    playAgain.on('pointerdown', () => {
+      this.scene.stop('BattleScene');
+      this.scene.stop('UIScene');
+      this.scene.start('OnlineBotSelectScene', { isHost });
+    });
+
+    const mainMenu = this.add.text(510, 378, '◄ MAIN MENU', {
+      fontSize: '13px', color: '#667788', fontFamily: 'monospace'
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    mainMenu.on('pointerover', () => mainMenu.setColor('#aabbcc'));
+    mainMenu.on('pointerout', () => mainMenu.setColor('#667788'));
+    mainMenu.on('pointerdown', () => {
+      NET.destroy();
+      this.scene.stop('BattleScene');
+      this.scene.stop('UIScene');
+      this.scene.start('MainMenuScene');
+    });
   }
 
   update() {

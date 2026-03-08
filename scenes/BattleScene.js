@@ -125,6 +125,9 @@ class BattleScene extends Phaser.Scene {
     this.aiBotDef = aiDef;
     this.playerBot = new playerDef.botClass(this, 150, 343);
     this.aiBot = new aiDef.botClass(this, 680, 200);
+    // Override constructor rotations so bots always face each other regardless of which bot was picked
+    this.playerBot.setRotation(0);       // left side faces right
+    this.aiBot.setRotation(Math.PI);     // right side faces left
     if (!this.isOnline) {
       this.botAI = new BotAI(this.aiBot, this.playerBot, { x: this.pitX, y: this.pitY, w: this.pitW, h: this.pitH });
     }
@@ -157,7 +160,7 @@ class BattleScene extends Phaser.Scene {
     const relSpeed = Math.sqrt(dvx * dvx + dvy * dvy);
     if (relSpeed < 25) return;
 
-    const baseDamage = relSpeed * 0.07;
+    const baseDamage = relSpeed * 0.008; // very low — weapons are the primary damage source
     const zone1 = this.getHitZone(bot2, bot1);
     const zone2 = this.getHitZone(bot1, bot2);
 
@@ -192,15 +195,17 @@ class BattleScene extends Phaser.Scene {
     if (bot.shadow) bot.shadow.setVisible(false);
     if (bot.nameLabel) bot.nameLabel.setVisible(false);
 
-    this.events.emit('gameOver', { winner, reason });
+    this.events.emit('gameOver', { winner, reason, isOnline: this.isOnline, isHost: this.isHost });
 
     if (this.isOnline && this.isHost) NET.send({ type: 'go', winner, reason });
 
-    this.time.delayedCall(3000, () => {
-      this.scene.stop('UIScene');
-      if (this.isOnline) NET.destroy();
-      this.scene.start('MainMenuScene', { result: { winner, reason, playerBotName: this.playerBotDef?.name, aiBotName: this.aiBotDef?.name } });
-    });
+    // Solo: auto-return after 3s. Online: UIScene shows Play Again / Main Menu buttons.
+    if (!this.isOnline) {
+      this.time.delayedCall(3000, () => {
+        this.scene.stop('UIScene');
+        this.scene.start('MainMenuScene', { result: { winner, reason, playerBotName: this.playerBotDef?.name, aiBotName: this.aiBotDef?.name } });
+      });
+    }
   }
 
   createExplosion(x, y) {
@@ -285,15 +290,16 @@ class BattleScene extends Phaser.Scene {
     if (this.gameOver) return;
     this.gameOver = true;
     const winner = this.playerBot.hp >= this.aiBot.hp ? 'Player' : 'AI';
-    this.events.emit('gameOver', { winner, reason: 'time' });
+    this.events.emit('gameOver', { winner, reason: 'time', isOnline: this.isOnline, isHost: this.isHost });
 
     if (this.isOnline && this.isHost) NET.send({ type: 'go', winner, reason: 'time' });
 
-    this.time.delayedCall(3000, () => {
-      this.scene.stop('UIScene');
-      if (this.isOnline) NET.destroy();
-      this.scene.start('MainMenuScene', { result: { winner, reason: 'time', playerBotName: this.playerBotDef?.name, aiBotName: this.aiBotDef?.name } });
-    });
+    if (!this.isOnline) {
+      this.time.delayedCall(3000, () => {
+        this.scene.stop('UIScene');
+        this.scene.start('MainMenuScene', { result: { winner, reason: 'time', playerBotName: this.playerBotDef?.name, aiBotName: this.aiBotDef?.name } });
+      });
+    }
   }
 
   // HOST: apply stored client input to aiBot
@@ -353,12 +359,8 @@ class BattleScene extends Phaser.Scene {
   _onRemoteGameOver(msg) {
     if (this.gameOver) return;
     this.gameOver = true;
-    this.events.emit('gameOver', { winner: msg.winner, reason: msg.reason });
-    this.time.delayedCall(3000, () => {
-      this.scene.stop('UIScene');
-      NET.destroy();
-      this.scene.start('MainMenuScene', { result: { winner: msg.winner, reason: msg.reason, playerBotName: this.playerBotDef?.name, aiBotName: this.aiBotDef?.name } });
-    });
+    // Client always isHost=false; UIScene will show Play Again / Main Menu buttons
+    this.events.emit('gameOver', { winner: msg.winner, reason: msg.reason, isOnline: true, isHost: false });
   }
 
   // Peer disconnected mid-match
