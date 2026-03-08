@@ -163,7 +163,7 @@ class BattleScene extends Phaser.Scene {
 
   handleBotCollision(bot1, bot2) {
     if (this.gameOver) return;
-    if (this.isOnline && !this.isHost) return; // client: host is authoritative for damage
+    if (this.isOnline && !this.isHost) return;
     const dvx = bot1.body.velocity.x - bot2.body.velocity.x;
     const dvy = bot1.body.velocity.y - bot2.body.velocity.y;
     const relSpeed = Math.sqrt(dvx * dvx + dvy * dvy);
@@ -173,11 +173,40 @@ class BattleScene extends Phaser.Scene {
     const zone1 = this.getHitZone(bot2, bot1);
     const zone2 = this.getHitZone(bot1, bot2);
 
-    // Active spinner deals extra damage to whatever it hits
-    const mult1 = bot2.spinnerActive ? GAME_CONFIG.weapons.spinnerMultiplier : 1.0;
-    const mult2 = bot1.spinnerActive ? GAME_CONFIG.weapons.spinnerMultiplier : 1.0;
-    bot1.takeDamage(baseDamage * mult1, zone1);
-    bot2.takeDamage(baseDamage * mult2, zone2);
+    // Helper: bypass SpinnerBot's takeDamage override (which resets spinEnergy)
+    // so self-damage doesn't zero out the spin before the hit is registered
+    const bypassTakeDamage = (bot, amount) => Bot.prototype.takeDamage.call(bot, amount, 'side');
+
+    // Spinner impact: energy-scaled damage mult + knockback + self-damage
+    const applySpinner = (spinner, victim) => {
+      if (!spinner.spinnerActive || !(spinner.spinEnergy > 0)) return 1.0;
+      const ratio = spinner.spinEnergy / 100;
+      const mult = GAME_CONFIG.weapons.spinnerMultiplier * ratio;
+
+      // Knockback impulse on victim
+      const kb = GAME_CONFIG.spinners.knockbackBase * ratio;
+      const angle = Math.atan2(victim.y - spinner.y, victim.x - spinner.x);
+      victim.body.setVelocity(Math.cos(angle) * kb, Math.sin(angle) * kb);
+
+      // Self-damage on spinner (bypass override so spinEnergy reset happens after)
+      bypassTakeDamage(spinner, baseDamage * mult * GAME_CONFIG.spinners.selfDamageRatio);
+      // Recoil
+      spinner.body.setVelocity(Math.cos(angle + Math.PI) * kb * 0.3, Math.sin(angle + Math.PI) * kb * 0.3);
+
+      // Impact text
+      if (ratio > 0.5) {
+        this.showImpactText(victim.x, victim.y - 30, ratio >= 0.9 ? 'KAPOW!' : 'WHAM!', '#ffcc00');
+      }
+
+      return mult;
+    };
+
+    // bot2 might be the spinner hitting bot1, and vice versa
+    const mult1 = applySpinner(bot2, bot1);
+    const mult2 = applySpinner(bot1, bot2);
+
+    bot1.takeDamage(baseDamage * (bot2.spinnerActive ? mult1 : 1.0), zone1);
+    bot2.takeDamage(baseDamage * (bot1.spinnerActive ? mult2 : 1.0), zone2);
 
     if (bot1.hp <= 0) this.knockOut(bot1, 'disable');
     else if (bot2.hp <= 0) this.knockOut(bot2, 'disable');
@@ -239,6 +268,22 @@ class BattleScene extends Phaser.Scene {
       });
     }
     this.cameras.main.shake(300, 0.015);
+  }
+
+  showImpactText(x, y, text, color = '#ffffff') {
+    const t = this.add.text(x, y, text, {
+      fontSize: '22px', color, fontFamily: 'monospace', fontStyle: 'bold'
+    }).setOrigin(0.5).setDepth(20);
+    this.tweens.add({
+      targets: t,
+      y: y - 48,
+      alpha: 0,
+      scaleX: 1.4,
+      scaleY: 1.4,
+      duration: 650,
+      ease: 'Power2',
+      onComplete: () => t.destroy()
+    });
   }
 
   update(time, delta) {
@@ -344,12 +389,12 @@ class BattleScene extends Phaser.Scene {
       type: 'state',
       p: {
         x: p.x, y: p.y, rot: p.rotation, hp: p.hp, driveHP: p.driveHP,
-        sa: p.spinnerActive || false, sang: p.spinnerAngle || 0,
+        sa: p.spinnerActive || false, sang: p.spinnerAngle || 0, sen: p.spinEnergy || 0,
         hs: p.hammerSwinging || false, ha: p._hammerAngle ?? -0.9, sg: p._swingGlow || false
       },
       a: {
         x: a.x, y: a.y, rot: a.rotation, hp: a.hp, driveHP: a.driveHP,
-        sa: a.spinnerActive || false, sang: a.spinnerAngle || 0,
+        sa: a.spinnerActive || false, sang: a.spinnerAngle || 0, sen: a.spinEnergy || 0,
         hs: a.hammerSwinging || false, ha: a._hammerAngle ?? -0.9, sg: a._swingGlow || false
       },
       timer: this.matchTimer
@@ -359,12 +404,17 @@ class BattleScene extends Phaser.Scene {
   // CLIENT: apply weapon state from network packet to a bot and refresh its graphics
   _applyWeaponState(bot, d) {
     if (bot.spinnerActive !== undefined) {
-      const wasActive = bot.spinnerActive;
       bot.spinnerActive = d.sa;
       bot.spinnerAngle = d.sang;
-      if (wasActive !== d.sa && bot._statusLabel) {
-        bot._statusLabel.setText(d.sa ? 'SPIN: ON' : 'SPIN: OFF');
-        bot._statusLabel.setColor(d.sa ? '#44ff88' : '#226633');
+      bot.spinEnergy = d.sen ?? 0;
+      if (bot._statusLabel) {
+        if (d.sa) {
+          const pct = Math.floor(d.sen || 0);
+          bot._statusLabel.setText(`SPIN: ${pct}%${pct >= 100 ? ' ★' : ''}`);
+          bot._statusLabel.setColor('#44ff88');
+        } else {
+          bot._statusLabel.setText('SPIN: OFF').setColor('#226633');
+        }
       }
       bot._updateSpinnerGfx?.();
     }
