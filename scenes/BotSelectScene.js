@@ -83,7 +83,11 @@ class BotSelectScene extends Phaser.Scene {
 
     const previewKey = 'preview_' + botDef.key;
     if (!this.textures.exists(previewKey)) {
-      Bot.createTexture(this, { ...botDef, key: previewKey });
+      if (botDef.loadoutConfig) {
+        CustomBot._makeTexture(this, previewKey, botDef.color, botDef.loadoutConfig.chassis);
+      } else {
+        Bot.createTexture(this, { ...botDef, key: previewKey });
+      }
     }
     const preview = this.add.image(x, y - 115, previewKey).setScale(2.5);
 
@@ -100,7 +104,17 @@ class BotSelectScene extends Phaser.Scene {
 
     const statItems = this._makeStatBars(x, y + 80, botDef.stats);
 
-    this.cardContainer.add([card, border, preview, nameText, weaponText, descText, ...statItems]);
+    const cardItems = [card, border, preview, nameText, weaponText, descText, ...statItems];
+
+    // [CUSTOM] badge for user-built bots
+    if (botDef.loadoutConfig) {
+      const badge = this.add.text(x, y - 155, '[CUSTOM]', {
+        fontSize: '10px', color: '#ffaa00', fontFamily: 'monospace', fontStyle: 'bold'
+      }).setOrigin(0.5);
+      cardItems.push(badge);
+    }
+
+    this.cardContainer.add(cardItems);
 
     card.on('pointerover', () => {
       if (this.selectedKey !== botDef.key) card.setFillStyle(0x1a1a33);

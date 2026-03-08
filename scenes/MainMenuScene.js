@@ -26,13 +26,13 @@ class MainMenuScene extends Phaser.Scene {
     }
 
     // Title
-    this.add.text(cx, 100, 'BATTLE', {
+    this.add.text(cx, 100, 'COMBAT', {
       fontSize: '80px', color: '#ff3300', fontFamily: 'monospace', fontStyle: 'bold'
     }).setOrigin(0.5);
-    this.add.text(cx, 185, 'BOTS', {
-      fontSize: '80px', color: '#ff9900', fontFamily: 'monospace', fontStyle: 'bold'
+    this.add.text(cx, 185, 'CLANKERS', {
+      fontSize: '64px', color: '#ff9900', fontFamily: 'monospace', fontStyle: 'bold'
     }).setOrigin(0.5);
-    this.add.text(cx, 275, 'A  R  E  N  A', {
+    this.add.text(cx, 265, 'A  R  E  N  A', {
       fontSize: '18px', color: '#445566', fontFamily: 'monospace'
     }).setOrigin(0.5);
 
