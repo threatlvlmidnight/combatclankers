@@ -15,14 +15,19 @@ class MainMenuScene extends Phaser.Scene {
     const cx = 450;
     this.drawBackground();
 
-    // Load player progress
-    this.playerProgress = PlayerStorage.loadPlayer();
-
-    // Handle match result if this is a return from battle
-    if (this.resultData) {
-      const isPlayerWin = this.resultData.winner === 'Player';
-      PlayerStorage.recordMatchResult(this.playerProgress, isPlayerWin, this.resultData.aiBotName, this.resultData.reason);
+    try {
+      // Load player progress
       this.playerProgress = PlayerStorage.loadPlayer();
+
+      // Handle match result if this is a return from battle
+      if (this.resultData) {
+        const isPlayerWin = this.resultData.winner === 'Player';
+        PlayerStorage.recordMatchResult(this.playerProgress, isPlayerWin, this.resultData.aiBotName, this.resultData.reason);
+        this.playerProgress = PlayerStorage.loadPlayer();
+      }
+    } catch (e) {
+      console.error('Error loading player progress:', e);
+      this.playerProgress = this.playerProgress || new PlayerProgress('Player');
     }
 
     // Title
@@ -37,26 +42,28 @@ class MainMenuScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     // Player status bar
-    this.drawPlayerStatus(cx, 318);
+    try { this.drawPlayerStatus(cx, 318); } catch (e) { console.error('drawPlayerStatus error:', e); }
 
     // Last match result
     if (this.resultData) {
-      const isPlayerWin = this.resultData.winner === 'Player';
-      const winColor = isPlayerWin ? '#4a9fd4' : '#dd4444';
-      const winName = isPlayerWin
-        ? (this.resultData.playerBotName || 'You')
-        : (this.resultData.aiBotName || 'AI');
-      const reasons = { pit: 'pit KO!', disable: 'disabled!', time: "judges' decision!" };
-      this.add.text(cx, 348, `Last match: ${winName} won — ${reasons[this.resultData.reason] || ''}`, {
-        fontSize: '14px', color: winColor, fontFamily: 'monospace'
-      }).setOrigin(0.5);
+      try {
+        const isPlayerWin = this.resultData.winner === 'Player';
+        const winColor = isPlayerWin ? '#4a9fd4' : '#dd4444';
+        const winName = isPlayerWin
+          ? (this.resultData.playerBotName || 'You')
+          : (this.resultData.aiBotName || 'AI');
+        const reasons = { pit: 'pit KO!', disable: 'disabled!', time: "judges' decision!" };
+        this.add.text(cx, 348, `Last match: ${winName} won — ${reasons[this.resultData.reason] || ''}`, {
+          fontSize: '14px', color: winColor, fontFamily: 'monospace'
+        }).setOrigin(0.5);
+      } catch (e) { console.error('Result display error:', e); }
     }
 
     const btnY = this.resultData ? 385 : 360;
     this.makeButton(cx, btnY, 'PLAY', 0xcc2200, 0xff4400, () => this.scene.start('ModeSelectScene'));
     this.makeButton(cx, btnY + 60, 'GARAGE', 0x1a3a5a, 0x2255aa, () => this.scene.start('GarageScene'));
     this.makeButton(cx - 130, btnY + 120, 'PROGRESSION', 0x2a3a1a, 0x44aa00, () => this.scene.start('ProgressionScene', { progress: this.playerProgress }));
-    this.makeButton(cx + 130, btnY + 120, 'LEADERBOARD', 0x1a2a4a, 0x0055ff, () => this.scene.start('LeaderboardScene', { playerName: this.playerProgress.playerName }));
+    this.makeButton(cx + 130, btnY + 120, 'LEADERBOARD', 0x1a2a4a, 0x0055ff, () => this.scene.start('LeaderboardScene', { playerName: this.playerProgress?.playerName }));
 
     this.add.text(cx, 610, `${GAME_VERSION}  ·  See version change to verify live updates`, {
       fontSize: '10px', color: '#445566', fontFamily: 'monospace'
