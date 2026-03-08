@@ -27,12 +27,13 @@ class CustomBot extends Bot {
     const textureKey = `custom_${cfg.key}`;
 
     if (!scene.textures.exists(textureKey)) {
-      CustomBot._makeTexture(scene, textureKey, cfg.color);
+      CustomBot._makeTexture(scene, textureKey, cfg.color, cfg.chassis);
     }
 
     super(scene, x, y, {
       key: textureKey,
       color: cfg.color,
+      chassis: cfg.chassis,
       hp: stats.hp,
       driveHP: 50,
       weaponHP: 55,
@@ -75,21 +76,17 @@ class CustomBot extends Bot {
     return { speed: Math.min(100, speedNorm), armor: Math.min(100, armorNorm), weapon: wp.power };
   }
 
-  static _makeTexture(scene, key, color) {
+  static _makeTexture(scene, key, color, chassis) {
     const g = scene.make.graphics({ add: false });
     const w = 65, h = 45;
     g.fillStyle(color, 1);
     g.fillRect(0, 5, w - 15, h - 10);
     g.fillStyle(0xaaaaaa, 1);
     g.fillTriangle(w - 15, 5, w - 15, h - 10, w, h / 2);
-    g.fillStyle(0x1a1a1a, 1);
-    g.fillRect(2, 2, w - 18, 9);
-    g.fillRect(2, h - 11, w - 18, 9);
-    g.fillStyle(0x444444, 1);
-    for (let i = 4; i < w - 20; i += 9) {
-      g.fillRect(i, 3, 5, 7);
-      g.fillRect(i, h - 10, 5, 7);
-    }
+    
+    // Draw wheels based on chassis
+    Bot._drawWheels(g, w, h, chassis || '4wheel');
+    
     g.generateTexture(key, w, h);
     g.destroy();
   }
@@ -160,6 +157,7 @@ class CustomBot extends Bot {
       case 'hammer':  HammerBot.prototype.updateWeapon.call(this, keys, delta, enemy); break;
       case 'flipper': FlipperBot.prototype.updateWeapon.call(this, keys, delta, enemy); break;
       case 'crusher': CrusherBot.prototype.updateWeapon.call(this, keys, delta, enemy); break;
+      // wedge has no active weapon, so nothing to do
     }
   }
 

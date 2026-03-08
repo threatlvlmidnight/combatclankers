@@ -39,17 +39,9 @@ class Bot extends Phaser.Physics.Arcade.Sprite {
     g.fillStyle(config.wedgeColor || 0xaaaaaa, 1);
     g.fillTriangle(w - 15, 5, w - 15, h - 10, w, h / 2);
 
-    // Tracks
-    g.fillStyle(0x1a1a1a, 1);
-    g.fillRect(2, 2, w - 18, 9);
-    g.fillRect(2, h - 11, w - 18, 9);
-
-    // Track segments
-    g.fillStyle(0x444444, 1);
-    for (let i = 4; i < w - 20; i += 9) {
-      g.fillRect(i, 3, 5, 7);
-      g.fillRect(i, h - 10, 5, 7);
-    }
+    // Draw wheels based on chassis type
+    const chassis = config.chassis || '4wheel';
+    Bot._drawWheels(g, w, h, chassis);
 
     // Body panel
     g.fillStyle(0x000000, 0.3);
@@ -57,6 +49,50 @@ class Bot extends Phaser.Physics.Arcade.Sprite {
 
     g.generateTexture(config.key, w, h);
     g.destroy();
+  }
+
+  static _drawWheels(g, w, h, chassis) {
+    const wheelColor = 0x1a1a1a;
+    const segmentColor = 0x444444;
+    g.fillStyle(wheelColor, 1);
+
+    if (chassis === '2wheel') {
+      // 2 large wheels at opposite ends
+      g.fillRect(2, 1, 12, 16);    // Front wheel
+      g.fillRect(w - 20, 1, 12, 16); // Rear wheel
+      g.fillRect(2, h - 17, 12, 16); // Front wheel
+      g.fillRect(w - 20, h - 17, 12, 16); // Rear wheel
+      // Wheel tread
+      g.fillStyle(segmentColor, 1);
+      for (let i = 2; i < 14; i += 3) {
+        g.fillRect(i, 2, 2, 14);
+        g.fillRect(i, h - 16, 2, 14);
+        g.fillRect(w - 19, 2, 2, 14);
+        g.fillRect(w - 19, h - 16, 2, 14);
+      }
+    } else if (chassis === '8wheel') {
+      // 8 small wheels - maximum traction
+      const wheelCount = 8;
+      const spacing = (w - 20) / (wheelCount + 1);
+      for (let i = 0; i < wheelCount; i++) {
+        const x = 2 + (i + 1) * spacing;
+        g.fillStyle(wheelColor, 1);
+        g.fillRect(x - 3, 2, 6, 8);
+        g.fillRect(x - 3, h - 10, 6, 8);
+        g.fillStyle(segmentColor, 1);
+        g.fillRect(x - 2, 3, 4, 6);
+        g.fillRect(x - 2, h - 9, 4, 6);
+      }
+    } else {
+      // 4wheel - default configuration
+      g.fillRect(2, 2, w - 18, 9);
+      g.fillRect(2, h - 11, w - 18, 9);
+      g.fillStyle(segmentColor, 1);
+      for (let i = 4; i < w - 20; i += 9) {
+        g.fillRect(i, 3, 5, 7);
+        g.fillRect(i, h - 10, 5, 7);
+      }
+    }
   }
 
   takeDamage(amount, zone) {
