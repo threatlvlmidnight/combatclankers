@@ -7,7 +7,7 @@ const config = {
     default: 'arcade',
     arcade: { debug: false, gravity: { x: 0, y: 0 } }
   },
-  scene: [MainMenuScene, ModeSelectScene, BotSelectScene, GarageScene, OnlineLobbyScene, OnlineBotSelectScene, PreBattleLoadingScene, BattleScene, UIScene]
+  scene: [MainMenuScene, ModeSelectScene, BotSelectScene, GarageScene, OnlineLobbyScene, OnlineBotSelectScene, PreBattleLoadingScene, BattleScene, UIScene, ProgressionScene, LeaderboardScene]
 };
 
 loadCustomRoster();

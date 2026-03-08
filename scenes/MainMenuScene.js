@@ -8,11 +8,22 @@ class MainMenuScene extends Phaser.Scene {
 
   init(data) {
     this.resultData = data?.result || null;
+    this.playerProgress = null;
   }
 
   create() {
     const cx = 450;
     this.drawBackground();
+
+    // Load player progress
+    this.playerProgress = PlayerStorage.loadPlayer();
+
+    // Handle match result if this is a return from battle
+    if (this.resultData) {
+      const isPlayerWin = this.resultData.winner === 'Player';
+      PlayerStorage.recordMatchResult(this.playerProgress, isPlayerWin, this.resultData.aiBotName, this.resultData.reason);
+      this.playerProgress = PlayerStorage.loadPlayer();
+    }
 
     // Title
     this.add.text(cx, 100, 'BATTLE', {
@@ -25,6 +36,9 @@ class MainMenuScene extends Phaser.Scene {
       fontSize: '18px', color: '#445566', fontFamily: 'monospace'
     }).setOrigin(0.5);
 
+    // Player status bar
+    this.drawPlayerStatus(cx, 318);
+
     // Last match result
     if (this.resultData) {
       const isPlayerWin = this.resultData.winner === 'Player';
@@ -33,17 +47,27 @@ class MainMenuScene extends Phaser.Scene {
         ? (this.resultData.playerBotName || 'You')
         : (this.resultData.aiBotName || 'AI');
       const reasons = { pit: 'pit KO!', disable: 'disabled!', time: "judges' decision!" };
-      this.add.text(cx, 318, `Last match: ${winName} won — ${reasons[this.resultData.reason] || ''}`, {
+      this.add.text(cx, 348, `Last match: ${winName} won — ${reasons[this.resultData.reason] || ''}`, {
         fontSize: '14px', color: winColor, fontFamily: 'monospace'
       }).setOrigin(0.5);
     }
 
-    const btnY = this.resultData ? 390 : 365;
+    const btnY = this.resultData ? 395 : 370;
     this.makeButton(cx, btnY, 'PLAY', 0xcc2200, 0xff4400, () => this.scene.start('ModeSelectScene'));
-    this.makeButton(cx, btnY + 75, 'GARAGE', 0x1a3a5a, 0x2255aa, () => this.scene.start('GarageScene'));
+    this.makeButton(cx, btnY + 65, 'GARAGE', 0x1a3a5a, 0x2255aa, () => this.scene.start('GarageScene'));
+    this.makeButton(cx, btnY + 130, 'PROGRESSION', 0x2a3a1a, 0x44aa00, () => this.scene.start('ProgressionScene', { progress: this.playerProgress }));
+    this.makeButton(cx - 125, btnY + 195, 'LEADERBOARD', 0x1a2a4a, 0x0055ff, () => this.scene.start('LeaderboardScene', { playerName: this.playerProgress.playerName }));
 
     this.add.text(cx, 610, `${GAME_VERSION}  ·  See version change to verify live updates`, {
       fontSize: '10px', color: '#445566', fontFamily: 'monospace'
+    }).setOrigin(0.5);
+  }
+
+  drawPlayerStatus(x, y) {
+    const stats = this.playerProgress.getStats();
+    const color = stats.rank >= 10 ? '#ffcc00' : stats.rank >= 5 ? '#4a9fd4' : '#aaaaaa';
+    this.add.text(x, y, `Rank ${stats.rank}  •  ${stats.wins}W-${stats.losses}L  •  ${stats.winRate}%`, {
+      fontSize: '12px', color, fontFamily: 'monospace'
     }).setOrigin(0.5);
   }
 
