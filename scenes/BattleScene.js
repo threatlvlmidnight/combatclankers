@@ -14,6 +14,7 @@ class BattleScene extends Phaser.Scene {
     this.createBots();
     this.createControls();
     this.setupPhysics();
+    if (this.scene.isActive('UIScene')) this.scene.stop('UIScene');
     this.scene.launch('UIScene');
   }
 
@@ -72,8 +73,7 @@ class BattleScene extends Phaser.Scene {
 
     const addWall = (wx, wy, ww, wh) => {
       const rect = this.add.rectangle(wx, wy, ww, wh, wallColor).setDepth(2);
-      this.physics.add.existing(rect, true);
-      this.walls.add(rect);
+      this.walls.add(rect); // staticGroup creates the static body
 
       // Wall highlight
       const hi = this.add.graphics().setDepth(3);
@@ -147,8 +147,8 @@ class BattleScene extends Phaser.Scene {
     const dy = attacker.y - target.y;
     const attackAngle = Math.atan2(dy, dx);
     const diff = Phaser.Math.Angle.Wrap(attackAngle - target.rotation);
-    if (Math.abs(diff) < Math.PI / 3) return 'rear';
-    if (Math.abs(diff) > Math.PI * 2 / 3) return 'front';
+    if (Math.abs(diff) < Math.PI / 3) return 'front';
+    if (Math.abs(diff) > Math.PI * 2 / 3) return 'rear';
     return 'side';
   }
 
@@ -214,11 +214,11 @@ class BattleScene extends Phaser.Scene {
     const keys = this.keys;
 
     if (keys.left.isDown) {
-      bot.body.setAngularVelocity(-bot.rotationSpeed);
+      bot.setAngularVelocity(-bot.rotationSpeed);
     } else if (keys.right.isDown) {
-      bot.body.setAngularVelocity(bot.rotationSpeed);
+      bot.setAngularVelocity(bot.rotationSpeed);
     } else {
-      bot.body.setAngularVelocity(0);
+      bot.setAngularVelocity(0);
     }
 
     if (keys.up.isDown) {

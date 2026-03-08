@@ -51,11 +51,11 @@ class BotAI {
     const angleDiff = Phaser.Math.Angle.Wrap(targetAngle - bot.rotation);
 
     if (angleDiff > 0.12) {
-      bot.body.setAngularVelocity(bot.rotationSpeed);
+      bot.setAngularVelocity(bot.rotationSpeed);
     } else if (angleDiff < -0.12) {
-      bot.body.setAngularVelocity(-bot.rotationSpeed);
+      bot.setAngularVelocity(-bot.rotationSpeed);
     } else {
-      bot.body.setAngularVelocity(0);
+      bot.setAngularVelocity(0);
     }
 
     if (Math.abs(angleDiff) < 0.6) {
@@ -68,7 +68,7 @@ class BotAI {
 
   doEvade() {
     const bot = this.bot;
-    bot.body.setAngularVelocity(bot.rotationSpeed * 0.6);
+    bot.setAngularVelocity(bot.rotationSpeed * 0.6);
     bot.body.setVelocity(
       -Math.cos(bot.rotation) * bot.botSpeed * 0.65,
       -Math.sin(bot.rotation) * bot.botSpeed * 0.65

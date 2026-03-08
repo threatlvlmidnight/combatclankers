@@ -51,6 +51,12 @@ class UIScene extends Phaser.Scene {
     // Events
     this.battleScene.events.on('timerUpdate', this.updateTimer, this);
     this.battleScene.events.on('gameOver', this.showGameOver, this);
+
+    // Clean up listeners when this scene stops (prevents stale callbacks on replay)
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.battleScene.events.off('timerUpdate', this.updateTimer, this);
+      this.battleScene.events.off('gameOver', this.showGameOver, this);
+    });
   }
 
   updateTimer(ms) {
