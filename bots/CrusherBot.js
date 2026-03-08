@@ -69,7 +69,8 @@ class CrusherBot extends Bot {
       this._grabTimer += delta;
       if (this._grabTimer >= cfg.maxGrabMs) {
         this._release(enemy);
-      } else if (jDown && !this._jWasDown) {
+      } else if (!jDown && this._jWasDown) {
+        // Q button released — auto-release grab
         this._release(enemy);
       } else if (enemy?.active) {
         // Lock enemy to front of crusher
