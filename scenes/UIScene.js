@@ -110,9 +110,10 @@ class UIScene extends Phaser.Scene {
     btn.on('pointerover', () => { btn.setFillStyle(0xff4400); });
     btn.on('pointerout', () => { btn.setFillStyle(0xcc2200); });
     btn.on('pointerdown', () => {
+      const result = { winner: data.winner, reason: data.reason };
+      this.scene.start('MainMenuScene', { result });
       this.scene.stop('BattleScene');
       this.scene.stop('UIScene');
-      this.scene.start('MainMenuScene', { result: { winner: data.winner, reason: data.reason } });
     });
   }
 

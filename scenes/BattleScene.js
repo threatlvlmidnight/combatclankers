@@ -253,16 +253,7 @@ class BattleScene extends Phaser.Scene {
 
     if (this.isOnline && this.isHost) NET.send({ type: 'go', winner, reason });
 
-    // Solo: auto-return after 3s. Online: UIScene shows Play Again / Main Menu buttons.
-    if (!this.isOnline) {
-      const resultData = { winner, reason, playerBotName: this.playerBotDef?.name, aiBotName: this.aiBotDef?.name };
-      const goToMenu = () => {
-        this.scene.stop('UIScene');
-        this.scene.stop('BattleScene');
-        this.scene.start('MainMenuScene', { result: resultData });
-      };
-      this.time.delayedCall(3000, goToMenu);
-    }
+    // Solo: UIScene shows MAIN MENU button. Online: UIScene shows Play Again / Main Menu buttons.
   }
 
   createExplosion(x, y) {
@@ -387,15 +378,7 @@ class BattleScene extends Phaser.Scene {
 
     if (this.isOnline && this.isHost) NET.send({ type: 'go', winner, reason: 'time' });
 
-    if (!this.isOnline) {
-      const resultData = { winner, reason: 'time', playerBotName: this.playerBotDef?.name, aiBotName: this.aiBotDef?.name };
-      const goToMenu = () => {
-        this.scene.stop('UIScene');
-        this.scene.stop('BattleScene');
-        this.scene.start('MainMenuScene', { result: resultData });
-      };
-      this.time.delayedCall(3000, goToMenu);
-    }
+    // Solo: UIScene shows MAIN MENU button. Online: UIScene shows Play Again / Main Menu buttons.
   }
 
   // HOST: apply stored client input to aiBot
