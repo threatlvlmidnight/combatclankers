@@ -107,6 +107,13 @@ class BattleScene extends Phaser.Scene {
     addWall(cx, this.arenaY + this.arenaH - wallThick / 2, this.arenaW, wallThick);
     addWall(this.arenaX + wallThick / 2, cy, wallThick, this.arenaH);
     addWall(this.arenaX + this.arenaW - wallThick / 2, cy, wallThick, this.arenaH);
+    this.walls.refresh(); // sync all static bodies
+
+    // World bounds = inner arena edge — prevents bots being pushed through walls by other bots
+    this.physics.world.setBounds(
+      this.arenaX + wallThick, this.arenaY + wallThick,
+      this.arenaW - wallThick * 2, this.arenaH - wallThick * 2
+    );
 
     // Pit zone (overlap trigger)
     this.pitZone = this.add.zone(pitX, pitY, pitW, pitH);
@@ -128,6 +135,8 @@ class BattleScene extends Phaser.Scene {
     // Override constructor rotations so bots always face each other regardless of which bot was picked
     this.playerBot.setRotation(0);       // left side faces right
     this.aiBot.setRotation(Math.PI);     // right side faces left
+    this.playerBot.setCollideWorldBounds(true);
+    this.aiBot.setCollideWorldBounds(true);
     if (!this.isOnline) {
       this.botAI = new BotAI(this.aiBot, this.playerBot, { x: this.pitX, y: this.pitY, w: this.pitW, h: this.pitH });
     }
