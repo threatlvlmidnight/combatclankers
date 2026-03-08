@@ -34,6 +34,34 @@ const GAME_CONFIG = {
     damageRate: 0.2,            // drive HP lost per 1 HP of body damage
     speedPenaltyThreshold: 10,  // drive HP below this triggers speed penalty
     speedPenaltyFactor: 0.4     // bot speed × this when drive is crippled
+  },
+
+  // ── Spinners ────────────────────────────────────────────────────────────────
+  spinners: {
+    drumSpinUpMs:      5000,   // time from 0% to 100% for drum spinner
+    driftForce:        40,     // sideways drift force on horizontal spinner at full charge
+    verticalSpeedFactor: 0.65, // speed multiplier for vertical spinner at full charge
+    selfDamageRatio:   0.10,   // fraction of dealt damage reflected back to spinner
+    knockbackBase:     320     // max velocity impulse applied to opponent on hit
+  },
+
+  // ── Flipper ─────────────────────────────────────────────────────────────────
+  flipper: {
+    flipForce:     600,   // velocity impulse at full charge
+    flipDamage:    15,    // HP damage at full charge
+    wallSlamDamage: 45,   // bonus damage when launched bot hits a wall
+    rechargeMs:    6000,  // full recharge time
+    armSwingMs:    120,   // arm forward stroke duration
+    rangeCheck:    62     // max distance to flip target
+  },
+
+  // ── Crusher ─────────────────────────────────────────────────────────────────
+  crusher: {
+    grabRange:       55,   // max distance to initiate grab
+    crushDps:        8,    // HP per second while grabbed
+    wallSlamDamage:  38,   // bonus HP when grabbed bot is driven into a wall
+    maxGrabMs:       3000, // auto-release after this long
+    grabCooldownMs:  2000  // cooldown between grabs
   }
 
 };
