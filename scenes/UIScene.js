@@ -103,12 +103,12 @@ class UIScene extends Phaser.Scene {
   }
 
   _showSoloButton(data) {
-    const btn = this.add.rectangle(450, 398, 180, 36, 0x331111).setInteractive({ useHandCursor: true });
-    const txt = this.add.text(450, 398, '◄ MAIN MENU', {
-      fontSize: '14px', color: '#cc4422', fontFamily: 'monospace', fontStyle: 'bold'
-    }).setOrigin(0.5);
-    btn.on('pointerover', () => { btn.setFillStyle(0x662211); txt.setColor('#ff6644'); });
-    btn.on('pointerout', () => { btn.setFillStyle(0x331111); txt.setColor('#cc4422'); });
+    const btn = this.add.rectangle(450, 405, 200, 40, 0xcc2200).setDepth(50).setInteractive({ useHandCursor: true });
+    const txt = this.add.text(450, 405, '◄ MAIN MENU', {
+      fontSize: '16px', color: '#ffffff', fontFamily: 'monospace', fontStyle: 'bold'
+    }).setOrigin(0.5).setDepth(51);
+    btn.on('pointerover', () => { btn.setFillStyle(0xff4400); });
+    btn.on('pointerout', () => { btn.setFillStyle(0xcc2200); });
     btn.on('pointerdown', () => {
       this.scene.stop('BattleScene');
       this.scene.stop('UIScene');
