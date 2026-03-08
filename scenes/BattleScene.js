@@ -262,10 +262,6 @@ class BattleScene extends Phaser.Scene {
         this.scene.start('MainMenuScene', { result: resultData });
       };
       this.time.delayedCall(3000, goToMenu);
-      // Fallback: click anywhere to return immediately after 1s
-      this.time.delayedCall(1000, () => {
-        this.input.once('pointerdown', goToMenu);
-      });
     }
   }
 
@@ -399,7 +395,6 @@ class BattleScene extends Phaser.Scene {
         this.scene.start('MainMenuScene', { result: resultData });
       };
       this.time.delayedCall(3000, goToMenu);
-      this.time.delayedCall(1000, () => { this.input.once('pointerdown', goToMenu); });
     }
   }
 
