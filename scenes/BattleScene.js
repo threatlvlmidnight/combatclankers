@@ -167,15 +167,15 @@ class BattleScene extends Phaser.Scene {
     const dvx = bot1.body.velocity.x - bot2.body.velocity.x;
     const dvy = bot1.body.velocity.y - bot2.body.velocity.y;
     const relSpeed = Math.sqrt(dvx * dvx + dvy * dvy);
-    if (relSpeed < 25) return;
+    if (relSpeed < GAME_CONFIG.collision.minRelSpeed) return;
 
-    const baseDamage = relSpeed * 0.008; // very low — weapons are the primary damage source
+    const baseDamage = relSpeed * GAME_CONFIG.collision.damageMultiplier;
     const zone1 = this.getHitZone(bot2, bot1);
     const zone2 = this.getHitZone(bot1, bot2);
 
-    // Active spinner deals 5× damage to whatever it hits
-    const mult1 = bot2.spinnerActive ? 5.0 : 1.0;
-    const mult2 = bot1.spinnerActive ? 5.0 : 1.0;
+    // Active spinner deals extra damage to whatever it hits
+    const mult1 = bot2.spinnerActive ? GAME_CONFIG.weapons.spinnerMultiplier : 1.0;
+    const mult2 = bot1.spinnerActive ? GAME_CONFIG.weapons.spinnerMultiplier : 1.0;
     bot1.takeDamage(baseDamage * mult1, zone1);
     bot2.takeDamage(baseDamage * mult2, zone2);
 

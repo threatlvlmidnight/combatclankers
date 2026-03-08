@@ -14,15 +14,16 @@ class HammerBot extends Bot {
     });
 
     this.hammerSwinging = false;
-    this._hammerAngle = -0.9;
-    this._jWasDown = false;
+    this._hammerAngle = -0.9;   // current arm angle relative to bot front
+    this._hammerReturning = false;
     this._hitDealt = false;
+    this._jWasDown = false;
+    this._swingEnemy = null;
+    this._swingGlow = false;
 
     this._hammerGfx = scene.add.graphics().setDepth(4);
-    this._swingGlow = false; // true during active strike window
     this._updateHammerGfx();
 
-    // "READY" indicator label
     this._statusLabel = scene.add.text(x, y + 38, 'HAMMER READY', {
       fontSize: '9px', color: '#886622', fontFamily: 'monospace'
     }).setOrigin(0.5).setDepth(5);
@@ -56,57 +57,57 @@ class HammerBot extends Bot {
   updateWeapon(keys, delta, enemy) {
     const jDown = keys.primaryFire.isDown;
     if (jDown && !this._jWasDown && !this.hammerSwinging) {
-      this._startSwing(enemy);
+      // Begin swing
+      this.hammerSwinging = true;
+      this._hammerAngle = -0.9;
+      this._hammerReturning = false;
+      this._hitDealt = false;
+      this._swingEnemy = enemy;
+      this._swingGlow = false;
+      if (this._statusLabel) this._statusLabel.setText('SWINGING!').setColor('#ffaa22');
     }
     this._jWasDown = jDown;
-    this._updateHammerGfx();
-  }
 
-  _startSwing(enemy) {
-    this.hammerSwinging = true;
-    this._hitDealt = false;
-    this._hammerAngle = -0.9;
-    this._swingGlow = false;
+    if (this.hammerSwinging) {
+      const cfg = GAME_CONFIG.weapons;
+      const swingSpeed = 1.8 / cfg.hammerSwingMs;    // radians per ms
+      const returnSpeed = 1.8 / cfg.hammerReturnMs;
 
-    if (this._statusLabel) {
-      this._statusLabel.setText('SWINGING!').setColor('#ffaa22');
-    }
-
-    this.scene.tweens.add({
-      targets: this,
-      _hammerAngle: 0.9,
-      duration: 280,
-      ease: 'Power3',
-      onUpdate: () => {
-        // Active strike window: angle > -0.1
+      if (!this._hammerReturning) {
+        // Forward stroke
+        this._hammerAngle += delta * swingSpeed;
         this._swingGlow = this._hammerAngle > -0.1;
-        if (!this._hitDealt && this._swingGlow && enemy?.active) {
+
+        // Hit detection during active window
+        if (!this._hitDealt && this._swingGlow && this._swingEnemy?.active) {
           const localAngle = this.rotation + this._hammerAngle;
           const tipX = this.x + Math.cos(localAngle) * 42;
           const tipY = this.y + Math.sin(localAngle) * 42;
-          if (Phaser.Math.Distance.Between(tipX, tipY, enemy.x, enemy.y) < 34) {
+          if (Phaser.Math.Distance.Between(tipX, tipY, this._swingEnemy.x, this._swingEnemy.y) < 34) {
             this._hitDealt = true;
-            enemy.takeDamage(35, 'side');
+            this._swingEnemy.takeDamage(cfg.hammerDamage, 'side');
             this.scene.cameras.main.shake(110, 0.009);
           }
         }
-      },
-      onComplete: () => {
-        this._swingGlow = false;
-        this.scene.tweens.add({
-          targets: this,
-          _hammerAngle: -0.9,
-          duration: 220,
-          ease: 'Back.easeOut',
-          onComplete: () => {
-            this.hammerSwinging = false;
-            if (this._statusLabel) {
-              this._statusLabel.setText('HAMMER READY').setColor('#886622');
-            }
-          }
-        });
+
+        if (this._hammerAngle >= 0.9) {
+          this._hammerAngle = 0.9;
+          this._hammerReturning = true;
+          this._swingGlow = false;
+        }
+      } else {
+        // Return stroke
+        this._hammerAngle -= delta * returnSpeed;
+        if (this._hammerAngle <= -0.9) {
+          this._hammerAngle = -0.9;
+          this.hammerSwinging = false;
+          this._hammerReturning = false;
+          if (this._statusLabel) this._statusLabel.setText('HAMMER READY').setColor('#886622');
+        }
       }
-    });
+    }
+
+    this._updateHammerGfx();
   }
 
   _updateHammerGfx() {
@@ -116,14 +117,14 @@ class HammerBot extends Bot {
     const localAngle = this.rotation + this._hammerAngle;
     const armLen = 38;
     const headHalf = 13;
-
-    // Arm (thicker: 5px half-width)
     const aw = 5;
+
     const ax = Math.cos(localAngle + Math.PI / 2) * aw;
     const ay = Math.sin(localAngle + Math.PI / 2) * aw;
     const ex = Math.cos(localAngle) * armLen;
     const ey = Math.sin(localAngle) * armLen;
 
+    // Arm
     g.fillStyle(0x885522, 1);
     g.fillTriangle(-ax, -ay,  ax, ay,  ex + ax, ey + ay);
     g.fillTriangle(-ax, -ay,  ex + ax, ey + ay,  ex - ax, ey - ay);
@@ -133,13 +134,11 @@ class HammerBot extends Bot {
     const py = Math.sin(localAngle + Math.PI / 2) * headHalf;
     const fw = Math.cos(localAngle) * 9;
     const fh = Math.sin(localAngle) * 9;
-
-    const headColor = this._swingGlow ? 0xffcc44 : 0xcc8833;
-    g.fillStyle(headColor, 1);
+    g.fillStyle(this._swingGlow ? 0xffcc44 : 0xcc8833, 1);
     g.fillTriangle(ex - px, ey - py,  ex + px, ey + py,  ex + px + fw, ey + py + fh);
     g.fillTriangle(ex - px, ey - py,  ex + px + fw, ey + py + fh,  ex - px + fw, ey - py + fh);
 
-    // Glow ring on head during strike
+    // Glow ring on head during active strike
     if (this._swingGlow) {
       g.lineStyle(3, 0xffff88, 0.8);
       g.strokeCircle(ex + fw / 2, ey + fh / 2, headHalf + 4);
@@ -152,6 +151,7 @@ class HammerBot extends Bot {
     super.preUpdate(time, delta);
     if (this.nameLabel) this.nameLabel.setPosition(this.x, this.y - 38);
     if (this._statusLabel) this._statusLabel.setPosition(this.x, this.y + 38);
+    // Keep gfx synced when not in weapon update (e.g. AI-controlled bot)
     if (!this.hammerSwinging) this._updateHammerGfx();
   }
 

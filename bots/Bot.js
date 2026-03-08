@@ -60,17 +60,16 @@ class Bot extends Phaser.Physics.Arcade.Sprite {
   }
 
   takeDamage(amount, zone) {
-    let multiplier = 1.0;
-    if (zone === 'front') multiplier = 0.5;
-    else if (zone === 'rear') multiplier = 1.5;
+    const hz = GAME_CONFIG.hitZones;
+    const multiplier = hz[zone] ?? 1.0;
 
     const finalDamage = amount * multiplier;
     this.hp = Math.max(0, this.hp - finalDamage);
 
-    // Damage drive slightly on any hit
-    this.driveHP = Math.max(0, this.driveHP - finalDamage * 0.2);
-    if (this.driveHP <= 10) {
-      this.botSpeed = this.botConfig.speed * 0.4;
+    const drv = GAME_CONFIG.drive;
+    this.driveHP = Math.max(0, this.driveHP - finalDamage * drv.damageRate);
+    if (this.driveHP <= drv.speedPenaltyThreshold) {
+      this.botSpeed = this.botConfig.speed * drv.speedPenaltyFactor;
     }
 
     this.setTint(0xff5555);
