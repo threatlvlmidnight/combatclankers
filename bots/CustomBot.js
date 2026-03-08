@@ -9,7 +9,7 @@ const CHASSIS_DEFS = {
 const ARMOR_DEFS = {
   light:  { label: 'LIGHT',  speedFactor: 1.25, hpFactor: 0.70, dr: 0.00, desc: 'Fragile but quick.' },
   medium: { label: 'MEDIUM', speedFactor: 1.00, hpFactor: 1.00, dr: 0.20, desc: 'Balanced protection.' },
-  heavy:  { label: 'HEAVY',  speedFactor: 0.60, hpFactor: 1.40, dr: 0.35, desc: 'Slow but tough.' }
+  heavy:  { label: 'HEAVY',  speedFactor: 0.45, hpFactor: 1.40, dr: 0.35, desc: 'Very slow but tough.' }
 };
 
 const WEAPON_DEFS = {
