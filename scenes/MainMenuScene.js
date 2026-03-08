@@ -1,4 +1,6 @@
 // scenes/MainMenuScene.js
+const GAME_VERSION = 'v0.2.1';
+
 class MainMenuScene extends Phaser.Scene {
   constructor() {
     super({ key: 'MainMenuScene' });
@@ -39,22 +41,10 @@ class MainMenuScene extends Phaser.Scene {
     const btnY = this.resultData ? 390 : 365;
     this.makeButton(cx, btnY, 'PLAY', 0xcc2200, 0xff4400, () => this.scene.start('ModeSelectScene'));
     this.makeButton(cx, btnY + 75, 'GARAGE', 0x1a3a5a, 0x2255aa, () => this.scene.start('GarageScene'));
-    this.makeButton(cx, btnY + 150, 'CLEAR CACHE', 0x2a1a1a, 0x553333, () => this._clearCache());
 
-    this.add.text(cx, 610, 'PoC v0.1  ·  Matter.js physics upgrade on roadmap', {
-      fontSize: '10px', color: '#222233', fontFamily: 'monospace'
+    this.add.text(cx, 610, `${GAME_VERSION}  ·  See version change to verify live updates`, {
+      fontSize: '10px', color: '#445566', fontFamily: 'monospace'
     }).setOrigin(0.5);
-  }
-
-  _clearCache() {
-    localStorage.removeItem('combatclankers_custom_bots');
-    CUSTOM_ROSTER.length = 0;
-    this.add.text(450, 550, 'Cache cleared! Custom bots deleted.', {
-      fontSize: '12px', color: '#ffaa44', fontFamily: 'monospace'
-    }).setOrigin(0.5);
-    this.time.delayedCall(2000, () => {
-      this.scene.restart();
-    });
   }
 
   makeButton(x, y, label, color, hoverColor, onClick) {
