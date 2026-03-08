@@ -11,28 +11,39 @@ class ProgressionScene extends Phaser.Scene {
   }
 
   create() {
-    this.drawBackground();
+    try {
+      this.drawBackground();
 
-    const padding = 30;
-    const x = padding;
-    const y = padding;
+      const padding = 30;
+      const x = padding;
+      const y = padding;
 
-    // Title
-    this.add.text(x, y, 'PROGRESSION & UNLOCKS', {
-      fontSize: '32px', color: '#ff9900', fontFamily: 'monospace', fontStyle: 'bold'
-    });
+      // Title
+      this.add.text(x, y, 'PROGRESSION & UNLOCKS', {
+        fontSize: '32px', color: '#ff9900', fontFamily: 'monospace', fontStyle: 'bold'
+      });
 
-    // Left side: Player stats
-    this.drawPlayerStats(x, y + 60);
+      // Left side: Player stats
+      if (this.playerProgress) {
+        this.drawPlayerStats(x, y + 60);
+      }
 
-    // Right side: Unlocked parts and next rewards
-    this.drawUnlockedParts(450, y + 60);
+      // Right side: Unlocked parts and next rewards
+      if (this.playerProgress) {
+        this.drawUnlockedParts(450, y + 60);
+      }
 
-    // Bottom: Bot customizations
-    this.drawBotCustomizations(x, 380);
+      // Bottom: Bot customizations
+      if (this.playerProgress) {
+        this.drawBotCustomizations(x, 380);
+      }
 
-    // Back button
-    this.makeBackButton(800, 620);
+      // Back button
+      this.makeBackButton(800, 620);
+    } catch (e) {
+      console.error('Error in ProgressionScene.create():', e);
+      this.scene.start('MainMenuScene');
+    }
   }
 
   drawPlayerStats(x, y) {
@@ -138,24 +149,29 @@ class ProgressionScene extends Phaser.Scene {
 
     let customY = y + 28;
     let botCount = 0;
-    for (const botKey in this.playerProgress.botCustomizations) {
-      const custom = this.playerProgress.botCustomizations[botKey];
-      const bot = BOT_ROSTER.find(b => b.key === botKey);
-      if (bot) {
-        const armorText = '▓'.repeat(custom.armorLevel) + '░'.repeat(5 - custom.armorLevel);
-        const weaponText = '▓'.repeat(custom.weaponLevel) + '░'.repeat(5 - custom.weaponLevel);
-        this.add.text(x, customY, `${bot.name}  Armor:${armorText} Weapon:${weaponText}`, {
-          fontSize: '10px', color: '#aaaaaa', fontFamily: 'monospace'
-        });
-        customY += 18;
-        botCount++;
-        if (botCount >= 3) break;  // Show first 3 bots
+    if (this.playerProgress && this.playerProgress.botCustomizations) {
+      for (const botKey in this.playerProgress.botCustomizations) {
+        const custom = this.playerProgress.botCustomizations[botKey];
+        if (!custom) continue;
+        const bot = BOT_ROSTER.find(b => b.key === botKey);
+        if (bot && custom.armorLevel && custom.weaponLevel) {
+          const armorLevel = Math.min(5, Math.max(1, custom.armorLevel));
+          const weaponLevel = Math.min(5, Math.max(1, custom.weaponLevel));
+          const armorText = '▓'.repeat(armorLevel) + '░'.repeat(5 - armorLevel);
+          const weaponText = '▓'.repeat(weaponLevel) + '░'.repeat(5 - weaponLevel);
+          this.add.text(x, customY, `${bot.name}  Armor:${armorText} Weapon:${weaponText}`, {
+            fontSize: '10px', color: '#aaaaaa', fontFamily: 'monospace'
+          });
+          customY += 18;
+          botCount++;
+          if (botCount >= 3) break;
+        }
       }
-    }
-    if (botCount === 3) {
-      this.add.text(x, customY, `...and ${Object.keys(this.playerProgress.botCustomizations).length - 3} more bots`, {
-        fontSize: '10px', color: '#666666', fontFamily: 'monospace'
-      });
+      if (botCount === 3 && this.playerProgress.botCustomizations) {
+        this.add.text(x, customY, `...and ${Object.keys(this.playerProgress.botCustomizations).length - 3} more bots`, {
+          fontSize: '10px', color: '#666666', fontFamily: 'monospace'
+        });
+      }
     }
   }
 

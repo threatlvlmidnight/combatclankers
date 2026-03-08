@@ -52,11 +52,11 @@ class MainMenuScene extends Phaser.Scene {
       }).setOrigin(0.5);
     }
 
-    const btnY = this.resultData ? 395 : 370;
+    const btnY = this.resultData ? 385 : 360;
     this.makeButton(cx, btnY, 'PLAY', 0xcc2200, 0xff4400, () => this.scene.start('ModeSelectScene'));
-    this.makeButton(cx, btnY + 65, 'GARAGE', 0x1a3a5a, 0x2255aa, () => this.scene.start('GarageScene'));
-    this.makeButton(cx, btnY + 130, 'PROGRESSION', 0x2a3a1a, 0x44aa00, () => this.scene.start('ProgressionScene', { progress: this.playerProgress }));
-    this.makeButton(cx - 125, btnY + 195, 'LEADERBOARD', 0x1a2a4a, 0x0055ff, () => this.scene.start('LeaderboardScene', { playerName: this.playerProgress.playerName }));
+    this.makeButton(cx, btnY + 60, 'GARAGE', 0x1a3a5a, 0x2255aa, () => this.scene.start('GarageScene'));
+    this.makeButton(cx - 130, btnY + 120, 'PROGRESSION', 0x2a3a1a, 0x44aa00, () => this.scene.start('ProgressionScene', { progress: this.playerProgress }));
+    this.makeButton(cx + 130, btnY + 120, 'LEADERBOARD', 0x1a2a4a, 0x0055ff, () => this.scene.start('LeaderboardScene', { playerName: this.playerProgress.playerName }));
 
     this.add.text(cx, 610, `${GAME_VERSION}  ·  See version change to verify live updates`, {
       fontSize: '10px', color: '#445566', fontFamily: 'monospace'

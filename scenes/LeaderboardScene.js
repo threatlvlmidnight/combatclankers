@@ -11,27 +11,32 @@ class LeaderboardScene extends Phaser.Scene {
   }
 
   create() {
-    this.drawBackground();
+    try {
+      this.drawBackground();
 
-    const cx = 450;
-    const topY = 30;
+      const cx = 450;
+      const topY = 30;
 
-    // Title
-    this.add.text(cx, topY, 'LEADERBOARD', {
-      fontSize: '40px', color: '#ff3300', fontFamily: 'monospace', fontStyle: 'bold'
-    }).setOrigin(0.5);
+      // Title
+      this.add.text(cx, topY, 'LEADERBOARD', {
+        fontSize: '40px', color: '#ff3300', fontFamily: 'monospace', fontStyle: 'bold'
+      }).setOrigin(0.5);
 
-    // Global stats
-    this.drawGlobalStats(cx, topY + 55);
+      // Global stats
+      this.drawGlobalStats(cx, topY + 55);
 
-    // Leaderboard table
-    this.drawLeaderboardTable(cx, 130);
+      // Leaderboard table
+      this.drawLeaderboardTable(cx, 130);
 
-    // Player context (if exists)
-    this.drawPlayerContext(cx, 500);
+      // Player context (if exists)
+      this.drawPlayerContext(cx, 500);
 
-    // Back button
-    this.makeBackButton(800, 620);
+      // Back button
+      this.makeBackButton(800, 620);
+    } catch (e) {
+      console.error('Error in LeaderboardScene.create():', e);
+      this.scene.start('MainMenuScene');
+    }
   }
 
   drawGlobalStats(x, y) {
