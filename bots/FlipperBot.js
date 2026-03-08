@@ -126,26 +126,45 @@ class FlipperBot extends Bot {
         this._wallCheckTimer = 800;
 
         // Launch animation — tumble spin + arc scale
+        // Airtime: 300ms at 0% charge → 1100ms at 100% charge
+        const airtime = 300 + chargeRatio * 800;
+        // Peak scale: 1.1x at low charge → 1.6x at full charge
+        const peakScale = 1 + 0.5 * chargeRatio;
         const spinDir = Math.random() < 0.5 ? 1 : -1;
-        enemy.setAngularVelocity(spinDir * 600 * chargeRatio);
-        const arcDuration = 180 + chargeRatio * 220; // 180–400ms
+        enemy.setAngularVelocity(spinDir * 700 * chargeRatio);
+
+        // Phase 1: rise (40% of airtime)
         this.scene.tweens.add({
           targets: enemy,
-          scaleX: 1 + 0.35 * chargeRatio,
-          scaleY: 1 + 0.35 * chargeRatio,
-          duration: arcDuration * 0.45,
+          scaleX: peakScale,
+          scaleY: peakScale,
+          duration: airtime * 0.4,
           ease: 'Sine.easeOut',
-          yoyo: true,
           onComplete: () => {
             if (!enemy.active) return;
-            enemy.setAngularVelocity(0);
-            enemy.setScale(1);
-            // Landing damage
-            const landDamage = Math.round(cfg.flipDamage * chargeRatio * 0.6);
-            if (landDamage > 0) enemy.takeDamage(landDamage, 'side');
-            if (this.scene.showImpactText && chargeRatio >= 0.4) {
-              this.scene.showImpactText(enemy.x, enemy.y - 16, 'THUD!', '#cc7722');
-            }
+            // Phase 2: fall (60% of airtime)
+            this.scene.tweens.add({
+              targets: enemy,
+              scaleX: 1,
+              scaleY: 1,
+              duration: airtime * 0.6,
+              ease: 'Sine.easeIn',
+              onComplete: () => {
+                if (!enemy.active) return;
+                enemy.setAngularVelocity(0);
+                enemy.setScale(1);
+                // Landing damage — heavier at full charge
+                const landDamage = Math.round(cfg.flipDamage * chargeRatio * 0.8);
+                if (landDamage > 0) enemy.takeDamage(landDamage, 'side');
+                const shakeStr = chargeRatio >= 0.85 ? 0.009 : 0.005;
+                if (chargeRatio >= 0.4) this.scene.cameras.main.shake(60, shakeStr);
+                if (this.scene.showImpactText && chargeRatio >= 0.4) {
+                  const landText = chargeRatio >= 0.85 ? 'CRASH!' : 'THUD!';
+                  const landColor = chargeRatio >= 0.85 ? '#ff4400' : '#cc7722';
+                  this.scene.showImpactText(enemy.x, enemy.y - 16, landText, landColor);
+                }
+              }
+            });
           }
         });
 

@@ -52,7 +52,7 @@ const GAME_CONFIG = {
     wallSlamDamage: 45,   // bonus damage when launched bot hits a wall
     rechargeMs:    6000,  // full recharge time
     armSwingMs:    120,   // arm forward stroke duration
-    rangeCheck:    62     // max distance to flip target
+    rangeCheck:    90     // max distance to flip target
   },
 
   // ── Crusher ─────────────────────────────────────────────────────────────────
