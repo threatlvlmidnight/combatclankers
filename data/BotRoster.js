@@ -39,5 +39,23 @@ const BOT_ROSTER = [
     weapon: 'Hammer',
     description: 'Overhead hammer. Press\nQ to slam opponents.',
     stats: { speed: 55, armor: 85, weapon: 75 }
+  },
+  {
+    key: 'catapult',
+    name: 'CATAPULT',
+    botClass: FlipperBot,
+    color: 0x1155cc,
+    weapon: 'Flipper',
+    description: 'Hydraulic flipper. Full\ncharge = massive launch.',
+    stats: { speed: 65, armor: 65, weapon: 80 }
+  },
+  {
+    key: 'ironjaw',
+    name: 'IRONJAW',
+    botClass: CrusherBot,
+    color: 0x882200,
+    weapon: 'Crusher',
+    description: 'Grab and steer. Ram\nopponent into walls.',
+    stats: { speed: 45, armor: 90, weapon: 70 }
   }
 ];
