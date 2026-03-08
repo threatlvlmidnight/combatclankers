@@ -100,7 +100,7 @@ class BattleScene extends Phaser.Scene {
   createBots() {
     this.playerBot = new WedgeBot1(this, 230, 325);
     this.aiBot = new WedgeBot2(this, 670, 325);
-    this.botAI = new BotAI(this.aiBot, this.playerBot);
+    this.botAI = new BotAI(this.aiBot, this.playerBot, { x: this.pitX, y: this.pitY, w: this.pitW, h: this.pitH });
   }
 
   createControls() {

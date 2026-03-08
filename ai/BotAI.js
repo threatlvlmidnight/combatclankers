@@ -1,7 +1,8 @@
 class BotAI {
-  constructor(bot, target) {
+  constructor(bot, target, pit) {
     this.bot = bot;
     this.target = target;
+    this.pit = pit; // { x, y, w, h }
     this.state = 'chase';
     this.evadeTimer = 0;
     this.lastHP = bot.hp;
@@ -45,8 +46,24 @@ class BotAI {
   doChase() {
     const bot = this.bot;
     const target = this.target;
-    const dx = target.x - bot.x;
-    const dy = target.y - bot.y;
+
+    // Pit avoidance: steer away from pit when nearby
+    let targetX = target.x;
+    let targetY = target.y;
+    if (this.pit) {
+      const botToPitDx = this.pit.x - bot.x;
+      const botToPitDy = this.pit.y - bot.y;
+      const botToPitDist = Math.sqrt(botToPitDx * botToPitDx + botToPitDy * botToPitDy);
+      const avoidRadius = Math.max(this.pit.w, this.pit.h) * 0.85 + 50;
+      if (botToPitDist < avoidRadius) {
+        const repulse = ((avoidRadius - botToPitDist) / avoidRadius) * 350;
+        targetX += (bot.x - this.pit.x) / botToPitDist * repulse;
+        targetY += (bot.y - this.pit.y) / botToPitDist * repulse;
+      }
+    }
+
+    const dx = targetX - bot.x;
+    const dy = targetY - bot.y;
     const targetAngle = Math.atan2(dy, dx);
     const angleDiff = Phaser.Math.Angle.Wrap(targetAngle - bot.rotation);
 
