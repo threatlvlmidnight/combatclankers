@@ -16,6 +16,7 @@ class SpinnerBot extends Bot {
     this.spinnerActive = false;
     this.spinnerAngle = 0;
     this._jWasDown = false;
+    this.spinEnergy = 0;   // 0-100, charges up while spinning
 
     // Ring: always visible — dim when off, bright when on
     this._ringGfx = scene.add.graphics().setDepth(3);
@@ -58,30 +59,60 @@ class SpinnerBot extends Bot {
     const jDown = keys.primaryFire.isDown;
     if (jDown && !this._jWasDown) {
       this.spinnerActive = !this.spinnerActive;
+      if (!this.spinnerActive) this.spinEnergy = 0; // reset on manual stop
       if (this._statusLabel) {
-        this._statusLabel.setText(this.spinnerActive ? 'SPIN: ON' : 'SPIN: OFF');
         this._statusLabel.setColor(this.spinnerActive ? '#44ff88' : '#226633');
       }
     }
     this._jWasDown = jDown;
 
-    if (this.spinnerActive) this.spinnerAngle += delta * 0.014;
+    if (this.spinnerActive) {
+      // Charge up
+      const chargeRate = 100 / GAME_CONFIG.spinners.drumSpinUpMs;
+      this.spinEnergy = Math.min(100, this.spinEnergy + delta * chargeRate);
+      this.spinnerAngle += delta * 0.014;
+
+      // Horizontal spinner drift — push perpendicular to facing
+      const perpAngle = this.rotation + Math.PI / 2;
+      const drift = GAME_CONFIG.spinners.driftForce * (this.spinEnergy / 100);
+      this.body.velocity.x += Math.cos(perpAngle) * drift * (delta / 1000) * 60;
+      this.body.velocity.y += Math.sin(perpAngle) * drift * (delta / 1000) * 60;
+    }
+
+    if (this._statusLabel) {
+      if (this.spinnerActive) {
+        const pct = Math.floor(this.spinEnergy);
+        const star = pct >= 100 ? ' ★' : '';
+        this._statusLabel.setText(`SPIN: ${pct}%${star}`);
+      } else {
+        this._statusLabel.setText('SPIN: OFF');
+      }
+    }
+
     this._updateSpinnerGfx();
   }
 
   _updateSpinnerGfx() {
     const drumX = this.x + Math.cos(this.rotation) * 20;
     const drumY = this.y + Math.sin(this.rotation) * 20;
+    const energyRatio = this.spinEnergy / 100;
 
-    // Ring: always draw, color varies
     this._ringGfx.clear();
     if (this.spinnerActive) {
-      const pulse = 0.7 + 0.3 * Math.sin(this.spinnerAngle * 3);
-      this._ringGfx.lineStyle(3, 0x44ffaa, pulse);
+      const pulse = 0.6 + 0.4 * Math.sin(this.spinnerAngle * 3);
+      const brightness = 0.4 + 0.6 * energyRatio;
+      const radius = 14 + 8 * energyRatio;  // 14px idle → 22px full
+      this._ringGfx.lineStyle(2 + Math.round(energyRatio * 2), 0x44ffaa, pulse * brightness);
+      this._ringGfx.strokeCircle(drumX, drumY, radius);
+      // Inner glow at high energy
+      if (energyRatio > 0.7) {
+        this._ringGfx.lineStyle(1, 0xffffff, (energyRatio - 0.7) * 2);
+        this._ringGfx.strokeCircle(drumX, drumY, radius - 4);
+      }
     } else {
-      this._ringGfx.lineStyle(1, 0x226633, 0.5);
+      this._ringGfx.lineStyle(1, 0x226633, 0.4);
+      this._ringGfx.strokeCircle(drumX, drumY, 14);
     }
-    this._ringGfx.strokeCircle(drumX, drumY, 16);
 
     if (this.spinnerActive) {
       this._drawBlades(drumX, drumY);
@@ -107,6 +138,18 @@ class SpinnerBot extends Bot {
     // Hub
     g.fillStyle(0x22ff88, 1);
     g.fillCircle(drumX, drumY, 5);
+  }
+
+  takeDamage(amount, zone) {
+    const result = super.takeDamage(amount, zone);
+    if (amount > 0) {
+      this.spinEnergy = 0;
+      this.spinnerActive = false;
+      if (this._statusLabel) {
+        this._statusLabel.setText('SPIN: OFF').setColor('#226633');
+      }
+    }
+    return result;
   }
 
   preUpdate(time, delta) {
