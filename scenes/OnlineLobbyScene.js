@@ -46,6 +46,7 @@ class OnlineLobbyScene extends Phaser.Scene {
         this._poll = null;
         this.roomCodeText.setText(id);
         this.statusText.setText('Share this code with your opponent.\nWaiting for them to join...');
+        this._addCopyButton(id);
       }
     }, 200);
   }
@@ -100,6 +101,23 @@ class OnlineLobbyScene extends Phaser.Scene {
     if (this._poll) { clearInterval(this._poll); this._poll = null; }
     if (this.inputEl) { this.inputEl.remove(); this.inputEl = null; }
     this.time.removeAllEvents();
+  }
+
+  _addCopyButton(id) {
+    if (this._copyBtn) return;
+    const btn = this.add.rectangle(450, 465, 140, 32, 0x223322).setInteractive({ useHandCursor: true });
+    const txt = this.add.text(450, 465, '[ COPY CODE ]', {
+      fontSize: '13px', color: '#44cc66', fontFamily: 'monospace'
+    }).setOrigin(0.5);
+    btn.on('pointerover', () => { btn.setFillStyle(0x335533); txt.setColor('#88ffaa'); });
+    btn.on('pointerout', () => { btn.setFillStyle(0x223322); txt.setColor('#44cc66'); });
+    btn.on('pointerdown', () => {
+      navigator.clipboard.writeText(id).then(() => {
+        txt.setText('[ COPIED! ]');
+        this.time.delayedCall(1500, () => txt.setText('[ COPY CODE ]'));
+      });
+    });
+    this._copyBtn = btn;
   }
 
   makeButton(x, y, label, color, hoverColor, onClick) {
