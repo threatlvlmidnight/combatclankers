@@ -38,7 +38,7 @@ const GAME_CONFIG = {
 
   // ── Spinners ────────────────────────────────────────────────────────────────
   spinners: {
-    drumSpinUpMs:      5000,   // time from 0% to 100% for drum spinner
+    drumSpinUpMs:      3800,   // time from 0% to 100% for drum spinner (faster spinup)
     driftForce:        40,     // sideways drift force on horizontal spinner at full charge
     verticalSpeedFactor: 0.65, // speed multiplier for vertical spinner at full charge
     selfDamageRatio:   0.10,   // fraction of dealt damage reflected back to spinner

@@ -14,6 +14,8 @@ class BattleScene extends Phaser.Scene {
     this._clientInput = { u: 0, d: 0, l: 0, r: 0 };
     this._stateTimer = 0;
     this._inputTimer = 0;
+    this._countdownActive = true;
+    this._countdownRemaining = 3000; // 3 seconds in ms
   }
 
   create() {
@@ -26,6 +28,11 @@ class BattleScene extends Phaser.Scene {
     this.setupPhysics();
     if (this.scene.isActive('UIScene')) this.scene.stop('UIScene');
     this.scene.launch('UIScene');
+
+    // Create countdown display
+    this.countdownText = this.add.text(450, 325, '3', {
+      fontSize: '120px', color: '#ff6633', fontFamily: 'monospace', fontStyle: 'bold'
+    }).setOrigin(0.5).setDepth(100);
 
     if (this.isOnline) {
       NET.onMessage(msg => this._onNetMessage(msg));
@@ -296,6 +303,23 @@ class BattleScene extends Phaser.Scene {
 
   update(time, delta) {
     if (this.gameOver) return;
+
+    // Handle countdown
+    if (this._countdownActive) {
+      this._countdownRemaining -= delta;
+      const countNum = Math.ceil(this._countdownRemaining / 1000);
+      if (countNum <= 0) {
+        // Countdown finished
+        this._countdownActive = false;
+        this.countdownText.destroy();
+      } else {
+        // Update countdown display
+        if (countNum === 3) this.countdownText.setText('3').setColor('#ff6633');
+        else if (countNum === 2) this.countdownText.setText('2').setColor('#ffaa33');
+        else if (countNum === 1) this.countdownText.setText('1').setColor('#ffff33');
+      }
+      return; // Skip all game updates during countdown
+    }
 
     // Only host (or solo) owns the timer
     if (!this.isOnline || this.isHost) {

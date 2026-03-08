@@ -37,7 +37,7 @@ class UIScene extends Phaser.Scene {
     }).setOrigin(0.5, 0);
 
     // --- Controls hint ---
-    this.add.text(450, 628, 'WASD: Move/Turn  |  Q: Primary  |  E: Secondary', {
+    this.add.text(450, 628, 'WASD: Move/Turn  |  J: Primary  |  K: Secondary', {
       fontSize: '11px', color: '#3a3a5e', fontFamily: 'monospace'
     }).setOrigin(0.5);
 
