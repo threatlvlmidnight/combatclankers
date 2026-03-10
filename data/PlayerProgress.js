@@ -59,33 +59,45 @@ class PlayerProgress {
   }
 
   _grantRankRewards() {
-    // Every rank gives armor or weapon unlock
-    const rewardPool = [
-      'armor_light', 'armor_heavy', 'armor_reinforced',
-      'weapon_damage', 'weapon_precision', 'weapon_efficiency',
-      'chassis_2wheel', 'chassis_8wheel',
-      'turbo_speed', 'turbo_acceleration'
-    ];
+    try {
+      if (!this.unlockedParts) this.unlockedParts = new Set();
+      if (!(this.unlockedParts instanceof Set)) this.unlockedParts = new Set(this.unlockedParts);
+      
+      const rewardPool = [
+        'armor_light', 'armor_heavy', 'armor_reinforced',
+        'weapon_damage', 'weapon_precision', 'weapon_efficiency',
+        'chassis_2wheel', 'chassis_8wheel',
+        'turbo_speed', 'turbo_acceleration'
+      ];
 
-    const newReward = rewardPool[Math.floor(Math.random() * rewardPool.length)];
-    if (newReward) {
-      this.unlockedParts.add(newReward);
+      const newReward = rewardPool[Math.floor(Math.random() * rewardPool.length)];
+      if (newReward) {
+        this.unlockedParts.add(newReward);
+        console.log(`[PlayerProgress] Rank ${this.rank}: Unlocked ${newReward}`);
+      }
+    } catch (e) {
+      console.error('[PlayerProgress] Error granting rank rewards:', e);
     }
   }
 
   recordMatch(won, opponentName = 'AI', reason = 'knockout') {
-    this.totalMatches++;
-    if (won) {
-      this.wins++;
-      this.winStreak++;
-      this.maxWinStreak = Math.max(this.maxWinStreak, this.winStreak);
-      this.addExperience(150);  // Win grants more exp
-    } else {
-      this.losses++;
-      this.winStreak = 0;
-      this.addExperience(50);   // Loss grants minimal exp
+    try {
+      this.totalMatches = (this.totalMatches || 0) + 1;
+      if (won) {
+        this.wins = (this.wins || 0) + 1;
+        this.winStreak = (this.winStreak || 0) + 1;
+        this.maxWinStreak = Math.max(this.maxWinStreak || 0, this.winStreak);
+        this.addExperience(150);
+      } else {
+        this.losses = (this.losses || 0) + 1;
+        this.winStreak = 0;
+        this.addExperience(50);
+      }
+      console.log(`[PlayerProgress] Match recorded: ${this.playerName} - Won: ${won}, Total: ${this.totalMatches}`);
+      this.lastUpdated = new Date().toISOString();
+    } catch (e) {
+      console.error('[PlayerProgress] Error in recordMatch():', e);
     }
-    this.lastUpdated = new Date().toISOString();
   }
 
   getWinRate() {
@@ -93,12 +105,25 @@ class PlayerProgress {
   }
 
   unlockPart(partKey) {
-    this.unlockedParts.add(partKey);
-    this.lastUpdated = new Date().toISOString();
+    try {
+      if (!this.unlockedParts) this.unlockedParts = new Set();
+      if (!(this.unlockedParts instanceof Set)) this.unlockedParts = new Set(this.unlockedParts);
+      this.unlockedParts.add(partKey);
+      this.lastUpdated = new Date().toISOString();
+    } catch (e) {
+      console.error('[PlayerProgress] Error unlocking part:', e);
+    }
   }
 
   isPartUnlocked(partKey) {
-    return this.unlockedParts.has(partKey);
+    try {
+      if (!this.unlockedParts) return false;
+      if (!(this.unlockedParts instanceof Set)) this.unlockedParts = new Set(this.unlockedParts);
+      return this.unlockedParts.has(partKey);
+    } catch (e) {
+      console.error('[PlayerProgress] Error checking if part is unlocked:', e);
+      return false;
+    }
   }
 
   upgradeBotArmor(botKey) {
@@ -127,51 +152,92 @@ class PlayerProgress {
   }
 
   getStats() {
-    return {
-      rank: this.rank,
-      experience: this.experience,
-      nextLevelExp: PlayerProgress.getExpForRank(this.rank + 1),
-      totalMatches: this.totalMatches,
-      wins: this.wins,
-      losses: this.losses,
-      winRate: this.getWinRate(),
-      winStreak: this.winStreak,
-      maxWinStreak: this.maxWinStreak,
-      unlockedParts: Array.from(this.unlockedParts).length,
-      totalParts: Object.keys(this.unlockedParts).length
-    };
+    try {
+      const unlockedCount = this.unlockedParts && this.unlockedParts.size ? this.unlockedParts.size : 0;
+      return {
+        rank: this.rank || 1,
+        experience: this.experience || 0,
+        nextLevelExp: PlayerProgress.getExpForRank((this.rank || 1) + 1),
+        totalMatches: this.totalMatches || 0,
+        wins: this.wins || 0,
+        losses: this.losses || 0,
+        winRate: this.getWinRate(),
+        winStreak: this.winStreak || 0,
+        maxWinStreak: this.maxWinStreak || 0,
+        unlockedParts: unlockedCount
+      };
+    } catch (e) {
+      console.error('Error in getStats():', e);
+      return {
+        rank: 1, experience: 0, nextLevelExp: 100,
+        totalMatches: 0, wins: 0, losses: 0, winRate: 0,
+        winStreak: 0, maxWinStreak: 0, unlockedParts: 3
+      };
+    }
   }
 
   toJSON() {
-    return {
-      playerName: this.playerName,
-      rank: this.rank,
-      experience: this.experience,
-      totalMatches: this.totalMatches,
-      wins: this.wins,
-      losses: this.losses,
-      winStreak: this.winStreak,
-      maxWinStreak: this.maxWinStreak,
-      unlockedParts: Array.from(this.unlockedParts),
-      botCustomizations: this.botCustomizations,
-      createdAt: this.createdAt,
-      lastUpdated: this.lastUpdated
-    };
+    try {
+      const partsList = this.unlockedParts instanceof Set 
+        ? Array.from(this.unlockedParts) 
+        : Array.isArray(this.unlockedParts) 
+          ? this.unlockedParts 
+          : ['armor_basic', 'weapon_basic', 'chassis_4wheel'];
+      
+      return {
+        playerName: this.playerName || 'Player',
+        rank: this.rank || 1,
+        experience: this.experience || 0,
+        totalMatches: this.totalMatches || 0,
+        wins: this.wins || 0,
+        losses: this.losses || 0,
+        winStreak: this.winStreak || 0,
+        maxWinStreak: this.maxWinStreak || 0,
+        unlockedParts: partsList,
+        botCustomizations: this.botCustomizations || {},
+        createdAt: this.createdAt || new Date().toISOString(),
+        lastUpdated: this.lastUpdated || new Date().toISOString()
+      };
+    } catch (e) {
+      console.error('[PlayerProgress] Error serializing to JSON:', e);
+      return {
+        playerName: 'Player', rank: 1, experience: 0, totalMatches: 0,
+        wins: 0, losses: 0, winStreak: 0, maxWinStreak: 0,
+        unlockedParts: ['armor_basic', 'weapon_basic', 'chassis_4wheel'],
+        botCustomizations: {},
+        createdAt: new Date().toISOString(),
+        lastUpdated: new Date().toISOString()
+      };
+    }
   }
 
   static fromJSON(data) {
-    const progress = new PlayerProgress(data.playerName);
-    progress.rank = data.rank;
-    progress.experience = data.experience;
-    progress.totalMatches = data.totalMatches;
-    progress.wins = data.wins;
-    progress.losses = data.losses;
-    progress.winStreak = data.winStreak;
-    progress.maxWinStreak = data.maxWinStreak;
-    progress.unlockedParts = new Set(data.unlockedParts);
-    progress.botCustomizations = data.botCustomizations;
-    progress.createdAt = data.createdAt;
-    progress.lastUpdated = data.lastUpdated;
-    return progress;
+    try {
+      const progress = new PlayerProgress(data?.playerName || 'Player');
+      progress.rank = data?.rank || 1;
+      progress.experience = data?.experience || 0;
+      progress.totalMatches = data?.totalMatches || 0;
+      progress.wins = data?.wins || 0;
+      progress.losses = data?.losses || 0;
+      progress.winStreak = data?.winStreak || 0;
+      progress.maxWinStreak = data?.maxWinStreak || 0;
+      
+      // Ensure unlockedParts is a Set
+      if (data?.unlockedParts) {
+        if (Array.isArray(data.unlockedParts)) {
+          progress.unlockedParts = new Set(data.unlockedParts);
+        } else if (data.unlockedParts instanceof Set) {
+          progress.unlockedParts = data.unlockedParts;
+        }
+      }
+      
+      progress.botCustomizations = data?.botCustomizations || {};
+      progress.createdAt = data?.createdAt || new Date().toISOString();
+      progress.lastUpdated = data?.lastUpdated || new Date().toISOString();
+      return progress;
+    } catch (e) {
+      console.error('[PlayerProgress] Error deserializing from JSON:', e);
+      return new PlayerProgress('Player');
+    }
   }
 }
