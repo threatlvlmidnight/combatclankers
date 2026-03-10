@@ -286,8 +286,16 @@ class BattleScene extends Phaser.Scene {
     if (bot.shadow) bot.shadow.setVisible(false);
     if (bot.nameLabel) bot.nameLabel.setVisible(false);
 
-    console.log('[BattleScene] knockOut — emitting gameOver:', { winner, reason, isOnline: this.isOnline });
-    this.events.emit('gameOver', { winner, reason, isOnline: this.isOnline, isHost: this.isHost });
+    const gameOverData = { 
+      winner, 
+      reason, 
+      isOnline: this.isOnline, 
+      isHost: this.isHost,
+      playerBotName: this.playerBotDef?.name || 'Player Bot',
+      aiBotName: this.aiBotDef?.name || 'AI Bot'
+    };
+    console.log('[BattleScene] knockOut — emitting gameOver:', gameOverData);
+    this.events.emit('gameOver', gameOverData);
 
     if (this.isOnline && this.isHost) NET.send({ type: 'go', winner, reason });
   }

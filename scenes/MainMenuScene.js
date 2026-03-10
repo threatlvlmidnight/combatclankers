@@ -19,12 +19,17 @@ class MainMenuScene extends Phaser.Scene {
     try {
       // Load player progress
       this.playerProgress = PlayerStorage.loadPlayer();
+      console.log('[MainMenuScene] Player progress loaded:', this.playerProgress?.playerName, 'Rank:', this.playerProgress?.rank);
 
       // Handle match result if this is a return from battle
       if (this.resultData) {
+        console.log('[MainMenuScene] Processing match result:', this.resultData);
         const isPlayerWin = this.resultData.winner === 'Player';
+        console.log('[MainMenuScene] Player won:', isPlayerWin);
         PlayerStorage.recordMatchResult(this.playerProgress, isPlayerWin, this.resultData.aiBotName, this.resultData.reason);
+        console.log('[MainMenuScene] Match recorded');
         this.playerProgress = PlayerStorage.loadPlayer();
+        console.log('[MainMenuScene] Progress reloaded after match');
       }
     } catch (e) {
       console.error('Error loading player progress:', e);
@@ -61,10 +66,36 @@ class MainMenuScene extends Phaser.Scene {
     }
 
     const btnY = this.resultData ? 385 : 360;
-    this.makeButton(cx, btnY, 'PLAY', 0xcc2200, 0xff4400, () => this.scene.start('ModeSelectScene'));
-    this.makeButton(cx, btnY + 60, 'GARAGE', 0x1a3a5a, 0x2255aa, () => this.scene.start('GarageScene'));
-    this.makeButton(cx - 130, btnY + 120, 'PROGRESSION', 0x2a3a1a, 0x44aa00, () => this.scene.start('ProgressionScene', { progress: this.playerProgress }));
-    this.makeButton(cx + 130, btnY + 120, 'LEADERBOARD', 0x1a2a4a, 0x0055ff, () => this.scene.start('LeaderboardScene', { playerName: this.playerProgress?.playerName }));
+    this.makeButton(cx, btnY, 'PLAY', 0xcc2200, 0xff4400, () => {
+      try {
+        this.scene.start('ModeSelectScene');
+      } catch (e) {
+        console.error('Error transitioning to ModeSelectScene:', e);
+      }
+    });
+    this.makeButton(cx, btnY + 60, 'GARAGE', 0x1a3a5a, 0x2255aa, () => {
+      try {
+        this.scene.start('GarageScene');
+      } catch (e) {
+        console.error('Error transitioning to GarageScene:', e);
+      }
+    });
+    this.makeButton(cx - 130, btnY + 120, 'PROGRESSION', 0x2a3a1a, 0x44aa00, () => {
+      try {
+        console.log('[MainMenuScene] Starting ProgressionScene with progress:', this.playerProgress);
+        this.scene.start('ProgressionScene', { progress: this.playerProgress });
+      } catch (e) {
+        console.error('Error transitioning to ProgressionScene:', e);
+      }
+    });
+    this.makeButton(cx + 130, btnY + 120, 'LEADERBOARD', 0x1a2a4a, 0x0055ff, () => {
+      try {
+        console.log('[MainMenuScene] Starting LeaderboardScene for player:', this.playerProgress?.playerName);
+        this.scene.start('LeaderboardScene', { playerName: this.playerProgress?.playerName || 'Player' });
+      } catch (e) {
+        console.error('Error transitioning to LeaderboardScene:', e);
+      }
+    });
 
     this.add.text(cx, 610, `${GAME_VERSION}  ·  See version change to verify live updates`, {
       fontSize: '10px', color: '#445566', fontFamily: 'monospace'
@@ -72,11 +103,19 @@ class MainMenuScene extends Phaser.Scene {
   }
 
   drawPlayerStatus(x, y) {
-    const stats = this.playerProgress.getStats();
-    const color = stats.rank >= 10 ? '#ffcc00' : stats.rank >= 5 ? '#4a9fd4' : '#aaaaaa';
-    this.add.text(x, y, `Rank ${stats.rank}  •  ${stats.wins}W-${stats.losses}L  •  ${stats.winRate}%`, {
-      fontSize: '12px', color, fontFamily: 'monospace'
-    }).setOrigin(0.5);
+    try {
+      if (!this.playerProgress) {
+        console.warn('[MainMenuScene] playerProgress not available');
+        return;
+      }
+      const stats = this.playerProgress.getStats();
+      const color = stats.rank >= 10 ? '#ffcc00' : stats.rank >= 5 ? '#4a9fd4' : '#aaaaaa';
+      this.add.text(x, y, `Rank ${stats.rank}  •  ${stats.wins}W-${stats.losses}L  •  ${stats.winRate}%`, {
+        fontSize: '12px', color, fontFamily: 'monospace'
+      }).setOrigin(0.5);
+    } catch (e) {
+      console.error('[MainMenuScene] Error drawing player status:', e);
+    }
   }
 
   makeButton(x, y, label, color, hoverColor, onClick) {

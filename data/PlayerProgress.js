@@ -21,13 +21,15 @@ class PlayerProgress {
 
     // Bot customizations unlocked per bot
     this.botCustomizations = {};
-    BOT_ROSTER.forEach(bot => {
-      this.botCustomizations[bot.key] = {
-        armorLevel: 1,      // 1-5
-        weaponLevel: 1,     // 1-5
-        customColor: bot.color
-      };
-    });
+    if (typeof BOT_ROSTER !== 'undefined' && BOT_ROSTER && BOT_ROSTER.length > 0) {
+      BOT_ROSTER.forEach(bot => {
+        this.botCustomizations[bot.key] = {
+          armorLevel: 1,      // 1-5
+          weaponLevel: 1,     // 1-5
+          customColor: bot.color
+        };
+      });
+    }
 
     this.createdAt = new Date().toISOString();
     this.lastUpdated = new Date().toISOString();

@@ -62,9 +62,20 @@ class PlayerStorage {
 
   // Record a match result and update leaderboard
   static recordMatchResult(progress, won, opponentName = 'AI', reason = 'knockout') {
-    progress.recordMatch(won, opponentName, reason);
-    this.savePlayer(progress);
-    this.updateLeaderboard(progress);
+    if (!progress) {
+      console.warn('recordMatchResult called with null/undefined progress');
+      return false;
+    }
+    try {
+      progress.recordMatch(won, opponentName, reason);
+      this.savePlayer(progress);
+      this.updateLeaderboard(progress);
+      console.log('[PlayerStorage] Match recorded for', progress.playerName, '- Won:', won);
+      return true;
+    } catch (e) {
+      console.error('Error recording match result:', e);
+      return false;
+    }
   }
 
   // Update leaderboard with player stats

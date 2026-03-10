@@ -112,10 +112,17 @@ class UIScene extends Phaser.Scene {
     btn.on('pointerdown', () => {
       console.log('[UIScene] MAIN MENU button clicked');
       console.log('[UIScene] battleScene ref:', this.battleScene);
-      console.log('[UIScene] battleScene status:', this.battleScene?.scene?.settings?.status);
+      console.log('[UIScene] data from gameOver:', data);
       btn.disableInteractive();
       try {
-        this.battleScene.events.emit('returnToMenu', { winner: data.winner, reason: data.reason });
+        const resultData = { 
+          winner: data.winner, 
+          reason: data.reason,
+          playerBotName: data.playerBotName,
+          aiBotName: data.aiBotName
+        };
+        console.log('[UIScene] Emitting returnToMenu with data:', resultData);
+        this.battleScene.events.emit('returnToMenu', { ...resultData });
         console.log('[UIScene] returnToMenu event emitted');
       } catch (e) {
         console.error('[UIScene] Error emitting returnToMenu:', e);
