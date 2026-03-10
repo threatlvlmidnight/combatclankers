@@ -69,7 +69,14 @@ class OnlineBotSelectScene extends Phaser.Scene {
     // Network message handler
     NET.onMessage(msg => {
       if (this.isHost && msg.type === 'hello') {
-        this.opponentKey = msg.botKey;
+        console.log('[OnlineBotSelectScene] Received opponent bot:', msg.botConfig);
+        if (msg.botConfig) {
+          const opponentConfig = deserializeBotConfig(msg.botConfig);
+          addOpponentBot(opponentConfig);
+          this.opponentKey = msg.botConfig.key;
+        } else {
+          this.opponentKey = msg.botKey; // Fallback for old protocol
+        }
         this.statusText.setText('Opponent picked their bot!');
         if (this.selectedKey) this.enableFight();
       } else if (!this.isHost && msg.type === 'start') {
@@ -189,7 +196,17 @@ class OnlineBotSelectScene extends Phaser.Scene {
     });
 
     if (!this.isHost) {
-      NET.send({ type: 'hello', botKey: key });
+      // Get the full bot definition
+      const allBots = [...BOT_ROSTER, ...CUSTOM_ROSTER];
+      const botDef = allBots.find(b => b.key === key);
+      
+      if (botDef) {
+        const botConfig = serializeBotConfig(botDef);
+        NET.send({ type: 'hello', botKey: key, botConfig });
+        console.log('[OnlineBotSelectScene] Sent bot config:', botConfig);
+      } else {
+        NET.send({ type: 'hello', botKey: key });
+      }
       this.statusText.setText('Waiting for host to start the match...');
     } else {
       this.statusText.setText(this.opponentKey

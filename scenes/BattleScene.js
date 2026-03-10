@@ -50,8 +50,21 @@ class BattleScene extends Phaser.Scene {
       try {
         this.scene.stop('UIScene');
         console.log('[BattleScene] UIScene stopped');
-        this.scene.start('MainMenuScene', { result });
-        console.log('[BattleScene] MainMenuScene start called');
+        
+        // For online matches with custom opponent bot, show bot reward screen
+        if (this.isOnline && this.aiBotDef?.isOpponentBot) {
+          console.log('[BattleScene] Showing BotRewardScene for opponent bot:', this.aiBotDef.key);
+          this.scene.start('BotRewardScene', {
+            opponentBotDef: this.aiBotDef,
+            matchResult: result,
+            onDone: () => {
+              this.scene.start('MainMenuScene', { result });
+            }
+          });
+        } else {
+          this.scene.start('MainMenuScene', { result });
+        }
+        console.log('[BattleScene] Scene transition initiated');
       } catch (e) {
         console.error('[BattleScene] TRANSITION ERROR:', e);
       }
@@ -170,21 +183,40 @@ class BattleScene extends Phaser.Scene {
   }
 
   createBots() {
-    const allBots = [...BOT_ROSTER, ...CUSTOM_ROSTER];
-    const playerDef = allBots.find(b => b.key === this.playerBotKey) || BOT_ROSTER[0];
-    const aiDef = allBots.find(b => b.key === this.aiBotKey) || BOT_ROSTER[1] || BOT_ROSTER[0];
+    const allBots = [...BOT_ROSTER, ...CUSTOM_ROSTER, ...OPPONENT_ROSTER];
+    let playerDef = allBots.find(b => b.key === this.playerBotKey);
+    let aiDef = allBots.find(b => b.key === this.aiBotKey);
+    
+    // Fallback to defaults if not found
+    if (!playerDef) {
+      console.warn(`[BattleScene] Player bot "${this.playerBotKey}" not found, using default`);
+      playerDef = BOT_ROSTER[0];
+    }
+    if (!aiDef) {
+      console.warn(`[BattleScene] AI bot "${this.aiBotKey}" not found, using default`);
+      aiDef = BOT_ROSTER[1] || BOT_ROSTER[0];
+    }
+    
     this.playerBotDef = playerDef;
     this.aiBotDef = aiDef;
     this.playerBot = new playerDef.botClass(this, 150, 343, playerDef);
     this.aiBot = new aiDef.botClass(this, 680, 200, aiDef);
+    
     // Override constructor rotations so bots always face each other regardless of which bot was picked
     this.playerBot.setRotation(0);       // left side faces right
     this.aiBot.setRotation(Math.PI);     // right side faces left
     this.playerBot.setCollideWorldBounds(true);
     this.aiBot.setCollideWorldBounds(true);
+    
     if (!this.isOnline) {
       this.botAI = new BotAI(this.aiBot, this.playerBot, { x: this.pitX, y: this.pitY, w: this.pitW, h: this.pitH });
     }
+    
+    console.log('[BattleScene] Bots created:', {
+      playerBot: { key: this.playerBotKey, name: playerDef.name },
+      aiBot: { key: this.aiBotKey, name: aiDef.name },
+      isOnline: this.isOnline
+    });
   }
 
   createControls() {
