@@ -11,7 +11,7 @@ const GAME_CONFIG = {
   // ── Weapons ────────────────────────────────────────────────────────────────
   weapons: {
     // SpinnerBot: multiplies collision damage dealt TO the opponent (INCREASED for more impact)
-    spinnerMultiplier: 50.0,
+    spinnerMultiplier: 70.0,
 
     // HammerBot: flat damage on a successful hammer tip hit
     hammerDamage: 35,

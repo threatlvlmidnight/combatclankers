@@ -19,6 +19,9 @@ class BattleScene extends Phaser.Scene {
     this._countdownStarted = false;  // track if countdown has started broadcasting
     this._playerMovedEarly = false;  // did player cheat by moving early?
     this._aiMovedEarly = false;      // did ai cheat by moving early?
+    this._playerZoneBounds = null;   // starting zone for player
+    this._aiZoneBounds = null;       // starting zone for ai
+    this._startingZoneSize = 80;     // size of each starting zone square
   }
 
   create() {
@@ -36,6 +39,19 @@ class BattleScene extends Phaser.Scene {
     this.countdownText = this.add.text(450, 325, '3', {
       fontSize: '120px', color: '#ff6633', fontFamily: 'monospace', fontStyle: 'bold'
     }).setOrigin(0.5).setDepth(100);
+
+    // Create starting zone squares (hidden until countdown)
+    this._playerZoneGraphic = this.add.rectangle(
+      this._playerZoneBounds.x, this._playerZoneBounds.y,
+      this._startingZoneSize, this._startingZoneSize,
+      0xff6633, 0.15
+    ).setStrokeStyle(2, 0xff6633).setDepth(50).setVisible(false);
+    
+    this._aiZoneGraphic = this.add.rectangle(
+      this._aiZoneBounds.x, this._aiZoneBounds.y,
+      this._startingZoneSize, this._startingZoneSize,
+      0x3366ff, 0.15
+    ).setStrokeStyle(2, 0x3366ff).setDepth(50).setVisible(false);
 
     if (this.isOnline) {
       NET.onMessage(msg => this._onNetMessage(msg));
@@ -217,7 +233,13 @@ class BattleScene extends Phaser.Scene {
       console.log('[BattleScene] CLIENT BOT SWAP APPLIED');
     }
     
+    // Store starting zone bounds for countdown validation
+    const zoneHalf = this._startingZoneSize / 2;
+    this._playerZoneBounds = { x: playerX, y: playerY, half: zoneHalf };
+    this._aiZoneBounds = { x: aiX, y: aiY, half: zoneHalf };
+    
     console.log('[BattleScene] Creating bots at:', { playerX, playerY, aiX, aiY });
+    console.log('[BattleScene] Starting zones:', { playerZone: this._playerZoneBounds, aiZone: this._aiZoneBounds });
     
     this.playerBot = new playerDef.botClass(this, playerX, playerY, playerDef);
     this.aiBot = new aiDef.botClass(this, aiX, aiY, aiDef);
@@ -428,15 +450,19 @@ class BattleScene extends Phaser.Scene {
         // Countdown finished
         this._countdownActive = false;
         this.countdownText.destroy();
+        this._playerZoneGraphic.setVisible(false);
+        this._aiZoneGraphic.setVisible(false);
         console.log('[BattleScene] Countdown finished');
       } else {
-        // Update countdown display
+        // Update countdown display and show zones
+        this._playerZoneGraphic.setVisible(true);
+        this._aiZoneGraphic.setVisible(true);
         if (countNum === 3) this.countdownText.setText('3').setColor('#ff6633');
         else if (countNum === 2) this.countdownText.setText('2').setColor('#ffaa33');
         else if (countNum === 1) this.countdownText.setText('1').setColor('#ffff33');
       }
       
-      // Check for early movement (before countdown started)
+      // Check for early movement or zone escape
       this._checkEarlyMovement();
       
       return; // Skip all game updates during countdown
@@ -498,13 +524,16 @@ class BattleScene extends Phaser.Scene {
   }
 
   _checkEarlyMovement() {
-    // Check if either player moved before countdown finished
+    // Check if either player moved outside zone or exceeded velocity threshold
     const moveThreshold = 5; // pixels per frame of movement
     const playerVel = Math.sqrt(this.playerBot.body.velocity.x ** 2 + this.playerBot.body.velocity.y ** 2);
     const aiVel = Math.sqrt(this.aiBot.body.velocity.x ** 2 + this.aiBot.body.velocity.y ** 2);
     
-    if (playerVel > moveThreshold && !this._playerMovedEarly) {
-      console.warn('[BattleScene] PLAYER moved before countdown finished - FORFEIT');
+    // Check player: velocity threshold OR outside zone
+    const playerOutOfZone = Math.abs(this.playerBot.x - this._playerZoneBounds.x) > this._playerZoneBounds.half ||
+                            Math.abs(this.playerBot.y - this._playerZoneBounds.y) > this._playerZoneBounds.half;
+    if ((playerVel > moveThreshold || playerOutOfZone) && !this._playerMovedEarly) {
+      console.warn('[BattleScene] PLAYER moved before countdown finished - FORFEIT', { vel: playerVel, outOfZone: playerOutOfZone });
       this._playerMovedEarly = true;
       // Immediately end game: AI wins
       if (this.isOnline && this.isHost) {
@@ -513,8 +542,12 @@ class BattleScene extends Phaser.Scene {
         this._endMatchEarly('AI', 'early_movement_forfeit');
       }
     }
-    if (aiVel > moveThreshold && !this._aiMovedEarly) {
-      console.warn('[BattleScene] AI moved before countdown finished - FORFEIT');
+    
+    // Check AI: velocity threshold OR outside zone
+    const aiOutOfZone = Math.abs(this.aiBot.x - this._aiZoneBounds.x) > this._aiZoneBounds.half ||
+                        Math.abs(this.aiBot.y - this._aiZoneBounds.y) > this._aiZoneBounds.half;
+    if ((aiVel > moveThreshold || aiOutOfZone) && !this._aiMovedEarly) {
+      console.warn('[BattleScene] AI moved before countdown finished - FORFEIT', { vel: aiVel, outOfZone: aiOutOfZone });
       this._aiMovedEarly = true;
       // Immediately end game: Player wins
       if (this.isOnline && this.isHost) {
