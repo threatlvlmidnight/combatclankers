@@ -660,12 +660,13 @@ class BattleScene extends Phaser.Scene {
       if (msg.type === 'input') { const { u, d, l, r, j } = msg; this._clientInput = { u, d, l, r, j }; }
     } else {
       if (msg.type === 'state') {
-        // CLIENT: Only update the opponent's bot (aiBot), not our own playerBot
-        this.aiBot.setPosition(msg.a.x, msg.a.y);
-        this.aiBot.setRotation(msg.a.rot);
-        this.aiBot.hp = msg.a.hp;
-        this.aiBot.driveHP = msg.a.driveHP;
-        this._applyWeaponState(this.aiBot, msg.a);
+        // CLIENT: msg.p is HOST's playerBot (opponent), msg.a is info about CLIENT's own bot
+        // After the key swap in PreBattleLoadingScene, HOST's bot appears as our aiBot
+        this.aiBot.setPosition(msg.p.x, msg.p.y);
+        this.aiBot.setRotation(msg.p.rot);
+        this.aiBot.hp = msg.p.hp;
+        this.aiBot.driveHP = msg.p.driveHP;
+        this._applyWeaponState(this.aiBot, msg.p);
         this.matchTimer = msg.timer;
       } else if (msg.type === 'weaponAnimation') {
         this._playRemoteWeaponAnimation(msg.weapon, msg.data);
