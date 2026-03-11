@@ -16,6 +16,9 @@ class BattleScene extends Phaser.Scene {
     this._inputTimer = 0;
     this._countdownActive = true;
     this._countdownRemaining = 3000; // 3 seconds in ms
+    this._countdownStarted = false;  // track if countdown has started broadcasting
+    this._playerMovedEarly = false;  // did player cheat by moving early?
+    this._aiMovedEarly = false;      // did ai cheat by moving early?
   }
 
   create() {
@@ -404,20 +407,38 @@ class BattleScene extends Phaser.Scene {
   update(time, delta) {
     if (this.gameOver) return;
 
-    // Handle countdown
+    // Handle countdown (HOST controls it and broadcasts to CLIENT)
     if (this._countdownActive) {
+      if (this.isOnline && this.isHost) {
+        // HOST: Send countdown state to CLIENT
+        if (!this._countdownStarted) {
+          this._countdownStarted = true;
+          console.log('[BattleScene] HOST broadcasting countdown start');
+        }
+        this._stateTimer += delta;
+        if (this._stateTimer >= 50) {
+          this._stateTimer = 0;
+          NET.send({ type: 'countdown', remaining: Math.max(0, this._countdownRemaining) });
+        }
+      }
+
       this._countdownRemaining -= delta;
       const countNum = Math.ceil(this._countdownRemaining / 1000);
       if (countNum <= 0) {
         // Countdown finished
         this._countdownActive = false;
         this.countdownText.destroy();
+        console.log('[BattleScene] Countdown finished');
       } else {
         // Update countdown display
         if (countNum === 3) this.countdownText.setText('3').setColor('#ff6633');
         else if (countNum === 2) this.countdownText.setText('2').setColor('#ffaa33');
         else if (countNum === 1) this.countdownText.setText('1').setColor('#ffff33');
       }
+      
+      // Check for early movement (before countdown started)
+      this._checkEarlyMovement();
+      
       return; // Skip all game updates during countdown
     }
 
@@ -474,6 +495,42 @@ class BattleScene extends Phaser.Scene {
     } else {
       bot.body.setVelocity(bot.body.velocity.x * 0.87, bot.body.velocity.y * 0.87);
     }
+  }
+
+  _checkEarlyMovement() {
+    // Check if either player moved before countdown finished
+    const moveThreshold = 5; // pixels per frame of movement
+    const playerVel = Math.sqrt(this.playerBot.body.velocity.x ** 2 + this.playerBot.body.velocity.y ** 2);
+    const aiVel = Math.sqrt(this.aiBot.body.velocity.x ** 2 + this.aiBot.body.velocity.y ** 2);
+    
+    if (playerVel > moveThreshold && !this._playerMovedEarly) {
+      console.warn('[BattleScene] PLAYER moved before countdown finished - FORFEIT');
+      this._playerMovedEarly = true;
+      // Immediately end game: AI wins
+      if (this.isOnline && this.isHost) {
+        this._endMatchEarly('AI', 'early_movement_forfeit');
+      } else if (!this.isOnline) {
+        this._endMatchEarly('AI', 'early_movement_forfeit');
+      }
+    }
+    if (aiVel > moveThreshold && !this._aiMovedEarly) {
+      console.warn('[BattleScene] AI moved before countdown finished - FORFEIT');
+      this._aiMovedEarly = true;
+      // Immediately end game: Player wins
+      if (this.isOnline && this.isHost) {
+        this._endMatchEarly('Player', 'early_movement_forfeit');
+      } else if (!this.isOnline) {
+        this._endMatchEarly('Player', 'early_movement_forfeit');
+      }
+    }
+  }
+
+  _endMatchEarly(winner, reason) {
+    if (this.gameOver) return;
+    this.gameOver = true;
+    console.log(`[BattleScene] Match ended early: ${winner} wins (${reason})`);
+    if (this.isOnline && this.isHost) NET.send({ type: 'go', winner, reason });
+    this.events.emit('gameOver', { winner, reason, isOnline: this.isOnline, isHost: this.isHost });
   }
 
   timeUp() {
@@ -694,7 +751,10 @@ class BattleScene extends Phaser.Scene {
     if (this.isHost) {
       if (msg.type === 'input') { const { u, d, l, r, j } = msg; this._clientInput = { u, d, l, r, j }; }
     } else {
-      if (msg.type === 'state') {
+      if (msg.type === 'countdown') {
+        // CLIENT: receive countdown timing from HOST
+        this._countdownRemaining = msg.remaining;
+      } else if (msg.type === 'state') {
         // CLIENT: msg.p is HOST's playerBot (opponent), msg.a is HOST's aiBot (our bot from host's view)
         // After the key swap, HOST's aiBot = CLIENT's playerBot
         this.playerBot.setPosition(msg.a.x, msg.a.y);
