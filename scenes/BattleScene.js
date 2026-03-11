@@ -199,12 +199,24 @@ class BattleScene extends Phaser.Scene {
     
     this.playerBotDef = playerDef;
     this.aiBotDef = aiDef;
-    this.playerBot = new playerDef.botClass(this, 150, 343, playerDef);
-    this.aiBot = new aiDef.botClass(this, 680, 200, aiDef);
     
-    // Override constructor rotations so bots always face each other regardless of which bot was picked
-    this.playerBot.setRotation(0);       // left side faces right
-    this.aiBot.setRotation(Math.PI);     // right side faces left
+    // For online CLIENT, swap bot positions: CLIENT controls bot on right
+    let playerX = 150, playerY = 343, aiX = 680, aiY = 200;
+    let playerRot = 0, aiRot = Math.PI;
+    
+    if (this.isOnline && !this.isHost) {
+      // CLIENT: player on right, opponent on left
+      playerX = 680; playerY = 200;
+      aiX = 150; aiY = 343;
+      playerRot = Math.PI; aiRot = 0;
+    }
+    
+    this.playerBot = new playerDef.botClass(this, playerX, playerY, playerDef);
+    this.aiBot = new aiDef.botClass(this, aiX, aiY, aiDef);
+    
+    // Set rotations so bots always face each other
+    this.playerBot.setRotation(playerRot);
+    this.aiBot.setRotation(aiRot);
     this.playerBot.setCollideWorldBounds(true);
     this.aiBot.setCollideWorldBounds(true);
     
@@ -213,9 +225,10 @@ class BattleScene extends Phaser.Scene {
     }
     
     console.log('[BattleScene] Bots created:', {
-      playerBot: { key: this.playerBotKey, name: playerDef.name },
-      aiBot: { key: this.aiBotKey, name: aiDef.name },
-      isOnline: this.isOnline
+      playerBot: { key: this.playerBotKey, name: playerDef.name, x: playerX, y: playerY },
+      aiBot: { key: this.aiBotKey, name: aiDef.name, x: aiX, y: aiY },
+      isOnline: this.isOnline,
+      isHost: this.isHost
     });
   }
 
@@ -581,8 +594,13 @@ class BattleScene extends Phaser.Scene {
   _playRemoteWeaponAnimation(weaponType, data) {
     console.log('[BattleScene] Received weapon animation:', { weaponType, targetKey: data.targetBotKey, chargeRatio: data.chargeRatio });
     
-    // Determine which bot was attacked (always aiBot - the opponent)
-    const targetBot = this.aiBot;
+    // For CLIENT, swap the target bot since positions are swapped
+    // HOST's aiBot (target) = CLIENT's playerBot
+    let targetBot = this.aiBot;
+    if (!this.isHost && data.targetBotKey === 'aiBot') {
+      targetBot = this.playerBot;  // HOST targeted their aiBot, which is our playerBot
+      console.log('[BattleScene] CLIENT swapped animation target from aiBot to playerBot');
+    }
     
     console.log('[BattleScene] Playing animation on bot:', { botX: targetBot.x, botY: targetBot.y, botKey: targetBot.key });
     if (!targetBot?.active) {
@@ -660,8 +678,15 @@ class BattleScene extends Phaser.Scene {
       if (msg.type === 'input') { const { u, d, l, r, j } = msg; this._clientInput = { u, d, l, r, j }; }
     } else {
       if (msg.type === 'state') {
-        // CLIENT: msg.p is HOST's playerBot (opponent), msg.a is info about CLIENT's own bot
-        // After the key swap in PreBattleLoadingScene, HOST's bot appears as our aiBot
+        // CLIENT: msg.p is HOST's playerBot (opponent), msg.a is HOST's aiBot (our bot from host's view)
+        // After the key swap, HOST's aiBot = CLIENT's playerBot
+        this.playerBot.setPosition(msg.a.x, msg.a.y);
+        this.playerBot.setRotation(msg.a.rot);
+        this.playerBot.hp = msg.a.hp;
+        this.playerBot.driveHP = msg.a.driveHP;
+        this._applyWeaponState(this.playerBot, msg.a);
+        
+        // msg.p is HOST's playerBot, which appears as CLIENT's aiBot (opponent on left)
         this.aiBot.setPosition(msg.p.x, msg.p.y);
         this.aiBot.setRotation(msg.p.rot);
         this.aiBot.hp = msg.p.hp;
