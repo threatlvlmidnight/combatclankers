@@ -660,11 +660,7 @@ class BattleScene extends Phaser.Scene {
       if (msg.type === 'input') { const { u, d, l, r, j } = msg; this._clientInput = { u, d, l, r, j }; }
     } else {
       if (msg.type === 'state') {
-        this.playerBot.setPosition(msg.p.x, msg.p.y);
-        this.playerBot.setRotation(msg.p.rot);
-        this.playerBot.hp = msg.p.hp;
-        this.playerBot.driveHP = msg.p.driveHP;
-        this._applyWeaponState(this.playerBot, msg.p);
+        // CLIENT: Only update the opponent's bot (aiBot), not our own playerBot
         this.aiBot.setPosition(msg.a.x, msg.a.y);
         this.aiBot.setRotation(msg.a.rot);
         this.aiBot.hp = msg.a.hp;
