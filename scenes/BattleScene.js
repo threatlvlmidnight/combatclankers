@@ -581,6 +581,8 @@ class BattleScene extends Phaser.Scene {
       NET.send({ type: 'ready', player: 'client' });
     }
   }
+
+  _checkEarlyMovement() {
     // Check if either player moved outside zone or exceeded velocity threshold
     const moveThreshold = 5; // pixels per frame of movement
     const playerVel = Math.sqrt(this.playerBot.body.velocity.x ** 2 + this.playerBot.body.velocity.y ** 2);
