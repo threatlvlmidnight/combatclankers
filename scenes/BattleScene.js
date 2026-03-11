@@ -722,8 +722,12 @@ class BattleScene extends Phaser.Scene {
   _onRemoteGameOver(msg) {
     if (this.gameOver) return;
     this.gameOver = true;
-    // Client always isHost=false; UIScene will show Play Again / Main Menu buttons
-    this.events.emit('gameOver', { winner: msg.winner, reason: msg.reason, isOnline: true, isHost: false });
+    // CLIENT: Swap winner interpretation because positions are swapped
+    // HOST's 'Player' = CLIENT's 'AI' (opponent on left)
+    // HOST's 'AI' = CLIENT's 'Player' (self on right)
+    const clientWinner = msg.winner === 'Player' ? 'AI' : 'Player';
+    console.log('[BattleScene] CLIENT received game over:', { hostWinner: msg.winner, clientWinner });
+    this.events.emit('gameOver', { winner: clientWinner, reason: msg.reason, isOnline: true, isHost: false });
   }
 
   // Peer disconnected mid-match

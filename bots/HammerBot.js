@@ -20,6 +20,7 @@ class HammerBot extends Bot {
     this._jWasDown = false;
     this._swingEnemy = null;
     this._swingGlow = false;
+    this._hammerCooldown = 0;   // cooldown timer after swing completes
 
     this._hammerGfx = scene.add.graphics().setDepth(4);
     this._updateHammerGfx();
@@ -56,8 +57,14 @@ class HammerBot extends Bot {
 
   updateWeapon(keys, delta, enemy) {
     const jDown = keys.primaryFire.isDown;
-    if (jDown && !this._jWasDown && !this.hammerSwinging) {
-      // Begin swing
+    
+    // Decrement cooldown timer
+    if (this._hammerCooldown > 0) {
+      this._hammerCooldown -= delta;
+    }
+    
+    if (jDown && !this._jWasDown && !this.hammerSwinging && this._hammerCooldown <= 0) {
+      // Begin swing (only if not on cooldown)
       this.hammerSwinging = true;
       this._hammerAngle = -0.9;
       this._hammerReturning = false;
@@ -102,6 +109,7 @@ class HammerBot extends Bot {
           this._hammerAngle = -0.9;
           this.hammerSwinging = false;
           this._hammerReturning = false;
+          this._hammerCooldown = GAME_CONFIG.weapons.hammerCooldownMs;  // Start cooldown
           if (this._statusLabel) this._statusLabel.setText('HAMMER READY').setColor('#886622');
         }
       }

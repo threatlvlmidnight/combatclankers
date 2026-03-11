@@ -18,7 +18,8 @@ const GAME_CONFIG = {
 
     // Hammer swing timing (milliseconds)
     hammerSwingMs: 280,
-    hammerReturnMs: 220
+    hammerReturnMs: 220,
+    hammerCooldownMs: 500  // cooldown between swings (new)
   },
 
   // ── Hit zones ──────────────────────────────────────────────────────────────
@@ -60,7 +61,7 @@ const GAME_CONFIG = {
     grabRange:       78,   // max distance to initiate grab (generous range)
     crushDps:        8,    // HP per second while grabbed
     wallSlamDamage:  38,   // bonus HP when grabbed bot is driven into a wall
-    maxGrabMs:       3000, // auto-release after this long
+    maxGrabMs:       2000, // auto-release after this long (reduced from 3000)
     grabCooldownMs:  1200  // cooldown between grabs
   }
 
