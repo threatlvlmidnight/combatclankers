@@ -14,17 +14,14 @@ class BattleScene extends Phaser.Scene {
     this._clientInput = { u: 0, d: 0, l: 0, r: 0 };
     this._stateTimer = 0;
     this._inputTimer = 0;
-    this._countdownActive = false;  // don't start until both players ready
+    this._countdownActive = false;  // set to true manually when ready to start
     this._countdownRemaining = 3000; // 3 seconds in ms
-    this._countdownStarting = false; // flag to prevent infinite restart
     this._countdownStarted = false;  // track if countdown has started broadcasting
     this._playerMovedEarly = false;  // did player cheat by moving early?
     this._aiMovedEarly = false;      // did ai cheat by moving early?
     this._playerZoneBounds = null;   // starting zone for player
     this._aiZoneBounds = null;       // starting zone for ai
     this._startingZoneSize = 80;     // size of each starting zone square
-    this._playerReady = false;       // player clicked ready
-    this._aiReady = !this.isOnline;  // AI is auto-ready in solo, waits for client signal online
   }
 
   create() {
@@ -37,6 +34,17 @@ class BattleScene extends Phaser.Scene {
     this.setupPhysics();
     if (this.scene.isActive('UIScene')) this.scene.stop('UIScene');
     this.scene.launch('UIScene');
+
+    // Clean up old buttons if they exist
+    if (this._playerReadyBtn) this._playerReadyBtn.destroy();
+    if (this._aiReadyBtn) this._aiReadyBtn.destroy();
+
+    // Reset ready state for each match
+    this._playerReady = false;
+    this._aiReady = !this.isOnline;  // solo mode auto-ready AI
+    this._countdownActive = false;
+    this._countdownStarting = false;
+    this._countdownRemaining = 3000;
 
     // Create countdown display
     this.countdownText = this.add.text(450, 325, '3', {
@@ -56,27 +64,33 @@ class BattleScene extends Phaser.Scene {
       0x3366ff, 0.15
     ).setStrokeStyle(2, 0x3366ff).setDepth(50).setVisible(false);
 
-    // Create READY buttons (only once)
-    if (!this._playerReadyBtn) {
-      const readyBtnX = 150, readyBtnY = 580;
-      const aiReadyBtnX = 680, aiReadyBtnY = 80;
+    // Solo: show ready buttons. Online: start countdown immediately after small delay
+    if (!this.isOnline) {
+      // SOLO: Ready buttons
+      this._playerReady = false;
+      this._aiReady = false;
       
-      this._playerReadyBtn = this.add.text(readyBtnX, readyBtnY, 'READY?', {
+      this._playerReadyBtn = this.add.text(150, 580, 'READY?', {
         fontSize: '20px', color: '#ff6633', fontFamily: 'Arial Black', fontStyle: 'bold',
         backgroundColor: '#1a1a1a', padding: { x: 15, y: 8 }
       }).setOrigin(0.5).setDepth(105).setInteractive({ useHandCursor: true });
-      this._playerReadyBtn.on('pointerdown', () => this._onPlayerReady());
+      this._playerReadyBtn.on('pointerdown', () => this._setSoloCountdown());
       
-      this._aiReadyBtn = this.add.text(aiReadyBtnX, aiReadyBtnY, 'READY?', {
+      this._aiReadyBtn = this.add.text(680, 80, 'READY?', {
         fontSize: '20px', color: '#3366ff', fontFamily: 'Arial Black', fontStyle: 'bold',
         backgroundColor: '#1a1a1a', padding: { x: 15, y: 8 }
       }).setOrigin(0.5).setDepth(105).setInteractive({ useHandCursor: true });
-      this._aiReadyBtn.on('pointerdown', () => this._onAiReady());
-
-      if (!this.isOnline) {
-        // Solo: AI button auto-clicks after small delay
-        this.time.delayedCall(500, () => this._onAiReady());
-      }
+      this._aiReadyBtn.on('pointerdown', () => this._setSoloCountdown());
+      
+      // Show AI btn countdown after delay
+      this.time.delayedCall(300, () => this._setSoloCountdown());
+    } else {
+      // ONLINE: Start countdown immediately
+      this.time.delayedCall(800, () => {
+        this._countdownActive = true;
+        this._countdownStarted = false;
+        if (this.isHost) console.log('[BattleScene] HOST starting countdown');
+      });
     }
 
     if (this.isOnline) {
@@ -463,15 +477,6 @@ class BattleScene extends Phaser.Scene {
   update(time, delta) {
     if (this.gameOver) return;
 
-    // Check if both players are ready and start countdown (only once)
-    if (!this._countdownStarting && this._playerReady && this._aiReady) {
-      this._countdownActive = true;
-      this._countdownStarting = true; // prevent restart
-      this._playerReadyBtn.setVisible(false);
-      this._aiReadyBtn.setVisible(false);
-      console.log('[BattleScene] Both players ready - starting countdown!');
-    }
-
     // Handle countdown (HOST controls it and broadcasts to CLIENT)
     if (this._countdownActive) {
       if (this.isOnline && this.isHost) {
@@ -566,24 +571,12 @@ class BattleScene extends Phaser.Scene {
     }
   }
 
-  _onPlayerReady() {
-    if (this._playerReady) return; // Already ready
-    this._playerReady = true;
-    this._playerReadyBtn.setColor('#00ff00').setText('READY!');
-    console.log('[BattleScene] Player marked ready');
-    if (this.isOnline && this.isHost) {
-      NET.send({ type: 'ready', player: 'host' });
-    }
-  }
-
-  _onAiReady() {
-    if (this._aiReady) return; // Already ready
-    this._aiReady = true;
-    this._aiReadyBtn.setColor('#00ff00').setText('READY!');
-    console.log('[BattleScene] AI/Client marked ready');
-    if (this.isOnline && this.isHost) {
-      NET.send({ type: 'ready', player: 'client' });
-    }
+  _setSoloCountdown() {
+    // Both buttons clicked - start countdown
+    this._playerReadyBtn?.destroy();
+    this._aiReadyBtn?.destroy();
+    this._countdownActive = true;
+    console.log('[BattleScene] SOLO: Both players ready - starting countdown');
   }
 
   _checkEarlyMovement() {
@@ -846,19 +839,8 @@ class BattleScene extends Phaser.Scene {
   _onNetMessage(msg) {
     if (this.isHost) {
       if (msg.type === 'input') { const { u, d, l, r, j } = msg; this._clientInput = { u, d, l, r, j }; }
-      if (msg.type === 'ready') {
-        // HOST receives ready signal from CLIENT
-        if (msg.player === 'client') {
-          this._aiReady = true;
-          this._aiReadyBtn.setColor('#00ff00').setText('READY!');
-          console.log('[BattleScene] HOST: Client sent ready signal');
-        }
-      }
     } else {
       if (msg.type === 'countdown') {
-        // CLIENT: receive countdown timing from HOST
-        this._countdownRemaining = msg.remaining;
-      } else if (msg.type === 'state') {
         // CLIENT: receive countdown timing from HOST
         this._countdownRemaining = msg.remaining;
       } else if (msg.type === 'state') {
