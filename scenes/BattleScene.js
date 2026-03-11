@@ -14,7 +14,7 @@ class BattleScene extends Phaser.Scene {
     this._clientInput = { u: 0, d: 0, l: 0, r: 0 };
     this._stateTimer = 0;
     this._inputTimer = 0;
-    this._countdownActive = true;
+    this._countdownActive = false;  // don't start until both players ready
     this._countdownRemaining = 3000; // 3 seconds in ms
     this._countdownStarted = false;  // track if countdown has started broadcasting
     this._playerMovedEarly = false;  // did player cheat by moving early?
@@ -22,6 +22,8 @@ class BattleScene extends Phaser.Scene {
     this._playerZoneBounds = null;   // starting zone for player
     this._aiZoneBounds = null;       // starting zone for ai
     this._startingZoneSize = 80;     // size of each starting zone square
+    this._playerReady = false;       // player clicked ready
+    this._aiReady = !this.isOnline;  // AI is auto-ready in solo, waits for client signal online
   }
 
   create() {
@@ -52,6 +54,27 @@ class BattleScene extends Phaser.Scene {
       this._startingZoneSize, this._startingZoneSize,
       0x3366ff, 0.15
     ).setStrokeStyle(2, 0x3366ff).setDepth(50).setVisible(false);
+
+    // Create READY buttons
+    const readyBtnX = 150, readyBtnY = 580;
+    const aiReadyBtnX = 680, aiReadyBtnY = 80;
+    
+    this._playerReadyBtn = this.add.text(readyBtnX, readyBtnY, 'READY?', {
+      fontSize: '20px', color: '#ff6633', fontFamily: 'Arial Black', fontStyle: 'bold',
+      backgroundColor: '#1a1a1a', padding: { x: 15, y: 8 }
+    }).setOrigin(0.5).setDepth(105).setInteractive({ useHandCursor: true });
+    this._playerReadyBtn.on('pointerdown', () => this._onPlayerReady());
+    
+    this._aiReadyBtn = this.add.text(aiReadyBtnX, aiReadyBtnY, 'READY?', {
+      fontSize: '20px', color: '#3366ff', fontFamily: 'Arial Black', fontStyle: 'bold',
+      backgroundColor: '#1a1a1a', padding: { x: 15, y: 8 }
+    }).setOrigin(0.5).setDepth(105).setInteractive({ useHandCursor: true });
+    this._aiReadyBtn.on('pointerdown', () => this._onAiReady());
+
+    if (!this.isOnline) {
+      // Solo: AI button auto-clicks after small delay
+      this.time.delayedCall(500, () => this._onAiReady());
+    }
 
     if (this.isOnline) {
       NET.onMessage(msg => this._onNetMessage(msg));
@@ -315,14 +338,18 @@ class BattleScene extends Phaser.Scene {
       const ratio = spinner.spinEnergy / 100;
       let mult = GAME_CONFIG.weapons.spinnerMultiplier * ratio;
 
-      // Bonus damage for near-max energy hits on lighter bots
-      // High energy + low victim armor = increased crit chance
-      if (ratio > 0.90 && victim._damageReduction !== undefined && victim._damageReduction < 0.3) {
-        // Extra damage bonus for full-charge hits on low-armor targets
-        mult *= 1.35; // 35% bonus damage
+      // MASSIVE BONUS for fully charged spinner (>95% energy) - like real BattleBots
+      if (ratio >= 0.95) {
+        mult *= 2.0; // DOUBLE damage on near-perfect charge
+      } else if (ratio > 0.90) {
+        // Already high energy bonus
+        mult *= 1.5; // 50% bonus for 90-95% charge
+      } else if (ratio > 0.70) {
+        // Medium charge bonus
+        mult *= 1.15; // 15% bonus for 70-90% charge
       }
 
-      // Knockback impulse on victim
+      // Knockback impulse on victim (scales with energy)
       const kb = GAME_CONFIG.spinners.knockbackBase * ratio;
       const angle = Math.atan2(victim.y - spinner.y, victim.x - spinner.x);
       victim.body.setVelocity(Math.cos(angle) * kb, Math.sin(angle) * kb);
@@ -333,8 +360,12 @@ class BattleScene extends Phaser.Scene {
       spinner.body.setVelocity(Math.cos(angle + Math.PI) * kb * 0.3, Math.sin(angle + Math.PI) * kb * 0.3);
 
       // Impact text
-      if (ratio > 0.5) {
-        this.showImpactText(victim.x, victim.y - 30, ratio >= 0.9 ? 'KAPOW!' : 'WHAM!', '#ffcc00');
+      if (ratio >= 0.95) {
+        this.showImpactText(victim.x, victim.y - 30, 'OBLITERATED!', '#ff0000');
+      } else if (ratio >= 0.9) {
+        this.showImpactText(victim.x, victim.y - 30, 'DEVASTATED!', '#ffaa00');
+      } else if (ratio > 0.5) {
+        this.showImpactText(victim.x, victim.y - 30, 'WHAM!', '#ffcc00');
       }
 
       return mult;
@@ -428,6 +459,14 @@ class BattleScene extends Phaser.Scene {
 
   update(time, delta) {
     if (this.gameOver) return;
+
+    // Check if both players are ready and start countdown
+    if (!this._countdownActive && this._playerReady && this._aiReady) {
+      this._countdownActive = true;
+      this._playerReadyBtn.setVisible(false);
+      this._aiReadyBtn.setVisible(false);
+      console.log('[BattleScene] Both players ready - starting countdown!');
+    }
 
     // Handle countdown (HOST controls it and broadcasts to CLIENT)
     if (this._countdownActive) {
@@ -523,7 +562,25 @@ class BattleScene extends Phaser.Scene {
     }
   }
 
-  _checkEarlyMovement() {
+  _onPlayerReady() {
+    if (this._playerReady) return; // Already ready
+    this._playerReady = true;
+    this._playerReadyBtn.setColor('#00ff00').setText('READY!');
+    console.log('[BattleScene] Player marked ready');
+    if (this.isOnline && this.isHost) {
+      NET.send({ type: 'ready', player: 'host' });
+    }
+  }
+
+  _onAiReady() {
+    if (this._aiReady) return; // Already ready
+    this._aiReady = true;
+    this._aiReadyBtn.setColor('#00ff00').setText('READY!');
+    console.log('[BattleScene] AI/Client marked ready');
+    if (this.isOnline && this.isHost) {
+      NET.send({ type: 'ready', player: 'client' });
+    }
+  }
     // Check if either player moved outside zone or exceeded velocity threshold
     const moveThreshold = 5; // pixels per frame of movement
     const playerVel = Math.sqrt(this.playerBot.body.velocity.x ** 2 + this.playerBot.body.velocity.y ** 2);
@@ -783,8 +840,19 @@ class BattleScene extends Phaser.Scene {
   _onNetMessage(msg) {
     if (this.isHost) {
       if (msg.type === 'input') { const { u, d, l, r, j } = msg; this._clientInput = { u, d, l, r, j }; }
+      if (msg.type === 'ready') {
+        // HOST receives ready signal from CLIENT
+        if (msg.player === 'client') {
+          this._aiReady = true;
+          this._aiReadyBtn.setColor('#00ff00').setText('READY!');
+          console.log('[BattleScene] HOST: Client sent ready signal');
+        }
+      }
     } else {
       if (msg.type === 'countdown') {
+        // CLIENT: receive countdown timing from HOST
+        this._countdownRemaining = msg.remaining;
+      } else if (msg.type === 'state') {
         // CLIENT: receive countdown timing from HOST
         this._countdownRemaining = msg.remaining;
       } else if (msg.type === 'state') {

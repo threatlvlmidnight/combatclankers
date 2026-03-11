@@ -43,7 +43,7 @@ const GAME_CONFIG = {
     driftForce:        40,     // sideways drift force on horizontal spinner at full charge
     verticalSpeedFactor: 0.65, // speed multiplier for vertical spinner at full charge
     selfDamageRatio:   0.10,   // fraction of dealt damage reflected back to spinner
-    knockbackBase:     320     // max velocity impulse applied to opponent on hit
+    knockbackBase:     580     // max velocity impulse applied to opponent on hit (INCREASED from 320)
   },
 
   // ── Flipper ─────────────────────────────────────────────────────────────────
