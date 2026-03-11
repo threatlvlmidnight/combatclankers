@@ -16,6 +16,7 @@ class BattleScene extends Phaser.Scene {
     this._inputTimer = 0;
     this._countdownActive = false;  // don't start until both players ready
     this._countdownRemaining = 3000; // 3 seconds in ms
+    this._countdownStarting = false; // flag to prevent infinite restart
     this._countdownStarted = false;  // track if countdown has started broadcasting
     this._playerMovedEarly = false;  // did player cheat by moving early?
     this._aiMovedEarly = false;      // did ai cheat by moving early?
@@ -55,25 +56,27 @@ class BattleScene extends Phaser.Scene {
       0x3366ff, 0.15
     ).setStrokeStyle(2, 0x3366ff).setDepth(50).setVisible(false);
 
-    // Create READY buttons
-    const readyBtnX = 150, readyBtnY = 580;
-    const aiReadyBtnX = 680, aiReadyBtnY = 80;
-    
-    this._playerReadyBtn = this.add.text(readyBtnX, readyBtnY, 'READY?', {
-      fontSize: '20px', color: '#ff6633', fontFamily: 'Arial Black', fontStyle: 'bold',
-      backgroundColor: '#1a1a1a', padding: { x: 15, y: 8 }
-    }).setOrigin(0.5).setDepth(105).setInteractive({ useHandCursor: true });
-    this._playerReadyBtn.on('pointerdown', () => this._onPlayerReady());
-    
-    this._aiReadyBtn = this.add.text(aiReadyBtnX, aiReadyBtnY, 'READY?', {
-      fontSize: '20px', color: '#3366ff', fontFamily: 'Arial Black', fontStyle: 'bold',
-      backgroundColor: '#1a1a1a', padding: { x: 15, y: 8 }
-    }).setOrigin(0.5).setDepth(105).setInteractive({ useHandCursor: true });
-    this._aiReadyBtn.on('pointerdown', () => this._onAiReady());
+    // Create READY buttons (only once)
+    if (!this._playerReadyBtn) {
+      const readyBtnX = 150, readyBtnY = 580;
+      const aiReadyBtnX = 680, aiReadyBtnY = 80;
+      
+      this._playerReadyBtn = this.add.text(readyBtnX, readyBtnY, 'READY?', {
+        fontSize: '20px', color: '#ff6633', fontFamily: 'Arial Black', fontStyle: 'bold',
+        backgroundColor: '#1a1a1a', padding: { x: 15, y: 8 }
+      }).setOrigin(0.5).setDepth(105).setInteractive({ useHandCursor: true });
+      this._playerReadyBtn.on('pointerdown', () => this._onPlayerReady());
+      
+      this._aiReadyBtn = this.add.text(aiReadyBtnX, aiReadyBtnY, 'READY?', {
+        fontSize: '20px', color: '#3366ff', fontFamily: 'Arial Black', fontStyle: 'bold',
+        backgroundColor: '#1a1a1a', padding: { x: 15, y: 8 }
+      }).setOrigin(0.5).setDepth(105).setInteractive({ useHandCursor: true });
+      this._aiReadyBtn.on('pointerdown', () => this._onAiReady());
 
-    if (!this.isOnline) {
-      // Solo: AI button auto-clicks after small delay
-      this.time.delayedCall(500, () => this._onAiReady());
+      if (!this.isOnline) {
+        // Solo: AI button auto-clicks after small delay
+        this.time.delayedCall(500, () => this._onAiReady());
+      }
     }
 
     if (this.isOnline) {
@@ -460,9 +463,10 @@ class BattleScene extends Phaser.Scene {
   update(time, delta) {
     if (this.gameOver) return;
 
-    // Check if both players are ready and start countdown
-    if (!this._countdownActive && this._playerReady && this._aiReady) {
+    // Check if both players are ready and start countdown (only once)
+    if (!this._countdownStarting && this._playerReady && this._aiReady) {
       this._countdownActive = true;
+      this._countdownStarting = true; // prevent restart
       this._playerReadyBtn.setVisible(false);
       this._aiReadyBtn.setVisible(false);
       console.log('[BattleScene] Both players ready - starting countdown!');
