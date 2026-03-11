@@ -125,12 +125,22 @@ class FlipperBot extends Bot {
         this._flippedEnemy = enemy;
         this._wallCheckTimer = 800;
 
+        // Broadcast animation to opponent if online
+        const spinDir = Math.random() < 0.5 ? 1 : -1;
+        if (this.scene.isOnline && this.scene.isHost) {
+          console.log('[FlipperBot] Broadcasting flip animation:', { chargeRatio, spinDir, enemyKey: enemy.key });
+          this.scene.broadcastWeaponAnimation('flipper', {
+            chargeRatio,
+            spinDir,
+            targetBotKey: 'aiBot'
+          });
+        }
+
         // Launch animation — tumble spin + arc scale
         // Airtime: 300ms at 0% charge → 1100ms at 100% charge
         const airtime = 300 + chargeRatio * 800;
         // Peak scale: 1.1x at low charge → 1.6x at full charge
         const peakScale = 1 + 0.5 * chargeRatio;
-        const spinDir = Math.random() < 0.5 ? 1 : -1;
         enemy.setAngularVelocity(spinDir * 700 * chargeRatio);
 
         // Phase 1: rise (40% of airtime)

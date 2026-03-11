@@ -6,8 +6,17 @@ class PreBattleLoadingScene extends Phaser.Scene {
   }
 
   init(data) {
-    this.playerBotKey = data?.playerBotKey || 'crusher';
-    this.aiBotKey = data?.aiBotKey || 'rampage';
+    // For online matches, CLIENT needs to swap bot keys so it controls its own bot
+    if (data?.isOnline && !data?.isHost) {
+      // HOST sends: playerBotKey=host's, aiBotKey=client's
+      // CLIENT should use: playerBotKey=client's, aiBotKey=host's
+      this.playerBotKey = data.aiBotKey || 'rampage';
+      this.aiBotKey = data.playerBotKey || 'crusher';
+      console.log('[PreBattleLoadingScene] CLIENT swapped bot keys:', { playerBotKey: this.playerBotKey, aiBotKey: this.aiBotKey });
+    } else {
+      this.playerBotKey = data?.playerBotKey || 'crusher';
+      this.aiBotKey = data?.aiBotKey || 'rampage';
+    }
     this.isOnline = data?.isOnline || false;
     this.isHost = data?.isHost || false;
   }

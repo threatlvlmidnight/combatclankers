@@ -474,6 +474,34 @@ class BattleScene extends Phaser.Scene {
     bot.updateWeapon?.({ primaryFire: { isDown: !!inp.j } }, delta, this.playerBot);
   }
 
+  // Broadcast a weapon activation to the opponent for animation sync
+  broadcastWeaponFire(weaponType, targetBotKey, params = {}) {
+    if (this.isOnline && this.isHost) {
+      NET.send({
+        type: 'weaponFire',
+        weapon: weaponType,
+        target: targetBotKey,
+        ...params
+      });
+    }
+  }
+
+  // Broadcast a weapon animation trigger to replay on opponent's scene
+  broadcastWeaponAnimation(weaponType, data) {
+    if (this.isOnline && this.isHost) {
+      console.log('[BattleScene] Broadcasting weapon animation:', { type: weaponType, data });
+      NET.send({
+        type: 'weaponAnimation',
+        weapon: weaponType,
+        data
+      });
+    } else if (!this.isOnline) {
+      console.log('[BattleScene] Not online, skipping animation broadcast');
+    } else if (!this.isHost) {
+      console.log('[BattleScene] Not host, skipping animation broadcast');
+    }
+  }
+
   // CLIENT: read local WASD and send as input packet
   _sendInput() {
     const k = this.keys;
@@ -549,6 +577,83 @@ class BattleScene extends Phaser.Scene {
     }
   }
 
+  // CLIENT: replay a weapon animation that was triggered on the host
+  _playRemoteWeaponAnimation(weaponType, data) {
+    console.log('[BattleScene] Received weapon animation:', { weaponType, targetKey: data.targetBotKey, chargeRatio: data.chargeRatio });
+    
+    // Determine which bot was attacked (always aiBot - the opponent)
+    const targetBot = this.aiBot;
+    
+    console.log('[BattleScene] Playing animation on bot:', { botX: targetBot.x, botY: targetBot.y, botKey: targetBot.key });
+    if (!targetBot?.active) {
+      console.warn('[BattleScene] Target bot not active, skipping animation');
+      return;
+    }
+
+    if (weaponType === 'flipper' && data.chargeRatio !== undefined) {
+      // Replay flipper animation
+      const chargeRatio = data.chargeRatio;
+      const airtime = 300 + chargeRatio * 800;
+      const peakScale = 1 + 0.5 * chargeRatio;
+      const spinDir = data.spinDir || 1;
+
+      console.log('[BattleScene] Starting flipper animation tween:', { 
+        botPos: { x: targetBot.x, y: targetBot.y }, 
+        chargeRatio, 
+        spinDir, 
+        airtime, 
+        peakScale 
+      });
+
+      targetBot.setAngularVelocity(spinDir * 700 * chargeRatio);
+
+      // Phase 1: rise
+      this.tweens.add({
+        targets: targetBot,
+        scaleX: peakScale,
+        scaleY: peakScale,
+        duration: airtime * 0.4,
+        ease: 'Sine.easeOut',
+        onComplete: () => {
+          console.log('[BattleScene] Flipper animation phase 1 complete (rising)');
+          if (!targetBot.active) return;
+          // Phase 2: fall
+          this.tweens.add({
+            targets: targetBot,
+            scaleX: 1,
+            scaleY: 1,
+            duration: airtime * 0.6,
+            ease: 'Sine.easeIn',
+            onComplete: () => {
+              console.log('[BattleScene] Flipper animation phase 2 complete (falling)');
+              if (!targetBot.active) return;
+              targetBot.setAngularVelocity(0);
+              targetBot.setScale(1);
+              const shakeStr = chargeRatio >= 0.85 ? 0.009 : 0.005;
+              if (chargeRatio >= 0.4) this.cameras.main.shake(60, shakeStr);
+              if (this.showImpactText && chargeRatio >= 0.4) {
+                const landText = chargeRatio >= 0.85 ? 'CRASH!' : 'THUD!';
+                const landColor = chargeRatio >= 0.85 ? '#ff4400' : '#cc7722';
+                this.showImpactText(targetBot.x, targetBot.y - 16, landText, landColor);
+              }
+            }
+          });
+        }
+      });
+
+      if (this.showImpactText) {
+        if (chargeRatio >= 0.85) {
+          this.showImpactText(targetBot.x, targetBot.y - 20, 'FWOOSH!', '#ff8800');
+          this.cameras.main.shake(80, 0.007);
+        } else if (chargeRatio >= 0.4) {
+          this.showImpactText(targetBot.x, targetBot.y - 20, 'WHOMP!', '#886600');
+        } else {
+          this.showImpactText(targetBot.x, targetBot.y - 14, 'thwp!', '#666666');
+        }
+      }
+    }
+  }
+
   // Dispatch incoming network messages
   _onNetMessage(msg) {
     if (this.isHost) {
@@ -566,6 +671,8 @@ class BattleScene extends Phaser.Scene {
         this.aiBot.driveHP = msg.a.driveHP;
         this._applyWeaponState(this.aiBot, msg.a);
         this.matchTimer = msg.timer;
+      } else if (msg.type === 'weaponAnimation') {
+        this._playRemoteWeaponAnimation(msg.weapon, msg.data);
       } else if (msg.type === 'go') {
         this._onRemoteGameOver(msg);
       }
