@@ -50,7 +50,7 @@ function serializeBotConfig(botDef) {
       };
     }
     
-    // For roster bots, include all properties
+    // For roster bots, include all properties with correct botClass name
     return {
       key: botDef.key,
       name: botDef.name,
@@ -76,6 +76,24 @@ function serializeBotConfig(botDef) {
 
 function deserializeBotConfig(data) {
   try {
+    // Determine the correct bot class
+    let botClass = CustomBot;
+    if (!data.isCustom && data.botClass) {
+      // For roster bots, map botClass name to actual class
+      const classMap = {
+        'FlipperBot': FlipperBot,
+        'SpinnerBot': SpinnerBot,
+        'HammerBot': HammerBot,
+        'CrusherBot': CrusherBot,
+        'WedgeBot1': WedgeBot1,
+        'WedgeBot2': WedgeBot2,
+        'CustomBot': CustomBot,
+        'Bot': Bot
+      };
+      botClass = classMap[data.botClass] || CustomBot;
+      console.log('[OpponentRoster] Mapped bot class:', { sent: data.botClass, resolved: botClass.name });
+    }
+
     // Reconstruct loadoutConfig for CustomBot
     const loadoutConfig = {
       color: data.color,
@@ -89,7 +107,7 @@ function deserializeBotConfig(data) {
     const config = {
       key: data.key,
       name: data.name,
-      botClass: CustomBot, // Use CustomBot for all opponent shared bots
+      botClass: botClass,
       color: data.color,
       wedgeColor: data.wedgeColor || data.color,
       chassis: data.chassis,
@@ -104,11 +122,11 @@ function deserializeBotConfig(data) {
       armor: data.armor || 0,
       weaponMod: data.weaponMod || 0,
       speedMod: data.speedMod || 0,
-      // CRITICAL: Include loadoutConfig for CustomBot constructor
+      // Include loadoutConfig for CustomBot constructor
       loadoutConfig: data.loadoutConfig || loadoutConfig,
       isOpponentBot: true
     };
-    console.log('[OpponentRoster] Deserialized bot config:', { key: config.key, name: config.name, hasLoadoutConfig: !!config.loadoutConfig });
+    console.log('[OpponentRoster] Deserialized bot config:', { key: config.key, name: config.name, botClass: config.botClass.name, hasLoadoutConfig: !!config.loadoutConfig });
     return config;
   } catch (e) {
     console.error('[OpponentRoster] Error deserializing bot:', e);
