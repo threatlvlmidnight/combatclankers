@@ -249,11 +249,23 @@ class BattleScene extends Phaser.Scene {
   }
 
   setupPhysics() {
-    this.physics.add.collider(this.playerBot, this.walls);
-    this.physics.add.collider(this.aiBot, this.walls);
+    this.physics.add.collider(this.playerBot, this.walls, () => this.handleWallCollision(this.playerBot));
+    this.physics.add.collider(this.aiBot, this.walls, () => this.handleWallCollision(this.aiBot));
     this.physics.add.collider(this.playerBot, this.aiBot, this.handleBotCollision, null, this);
     this.physics.add.overlap(this.playerBot, this.pitZone, () => { if (!this.isOnline || this.isHost) this.knockOut(this.playerBot, 'pit'); });
     this.physics.add.overlap(this.aiBot, this.pitZone, () => { if (!this.isOnline || this.isHost) this.knockOut(this.aiBot, 'pit'); });
+  }
+
+  handleWallCollision(bot) {
+    // Stop spinner on wall collision
+    if (bot.spinnerActive) {
+      bot.spinnerActive = false;
+      bot.spinEnergy = 0;
+      if (bot._statusLabel) {
+        bot._statusLabel.setText('SPIN: OFF').setColor('#226633');
+      }
+      console.log('[BattleScene] Spinner hit wall and stopped:', bot.key);
+    }
   }
 
   handleBotCollision(bot1, bot2) {
