@@ -204,12 +204,17 @@ class BattleScene extends Phaser.Scene {
     let playerX = 150, playerY = 343, aiX = 680, aiY = 200;
     let playerRot = 0, aiRot = Math.PI;
     
+    console.log('[BattleScene] createBots check:', { isOnline: this.isOnline, isHost: this.isHost, willSwap: this.isOnline && !this.isHost });
+    
     if (this.isOnline && !this.isHost) {
       // CLIENT: player on right, opponent on left
       playerX = 680; playerY = 200;
       aiX = 150; aiY = 343;
       playerRot = Math.PI; aiRot = 0;
+      console.log('[BattleScene] CLIENT BOT SWAP APPLIED');
     }
+    
+    console.log('[BattleScene] Creating bots at:', { playerX, playerY, aiX, aiY });
     
     this.playerBot = new playerDef.botClass(this, playerX, playerY, playerDef);
     this.aiBot = new aiDef.botClass(this, aiX, aiY, aiDef);
@@ -225,8 +230,8 @@ class BattleScene extends Phaser.Scene {
     }
     
     console.log('[BattleScene] Bots created:', {
-      playerBot: { key: this.playerBotKey, name: playerDef.name, x: playerX, y: playerY },
-      aiBot: { key: this.aiBotKey, name: aiDef.name, x: aiX, y: aiY },
+      playerBot: { key: this.playerBotKey, name: playerDef.name, x: this.playerBot.x, y: this.playerBot.y },
+      aiBot: { key: this.aiBotKey, name: aiDef.name, x: this.aiBot.x, y: this.aiBot.y },
       isOnline: this.isOnline,
       isHost: this.isHost
     });
